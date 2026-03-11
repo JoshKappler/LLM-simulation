@@ -1,26 +1,345 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+* { box-sizing: border-box; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  background: #008080;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ── Win95 borders ─────────────────────────────────────────── */
+.w95-raise {
+  border-style: solid;
+  border-width: 2px;
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+.w95-inset {
+  border-style: solid;
+  border-width: 2px;
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+}
+.w95-deep-inset {
+  border-style: solid;
+  border-width: 2px;
+  border-color: #404040 #ffffff #ffffff #404040;
+}
+
+/* ── Win95 button ──────────────────────────────────────────── */
+.w95-btn {
+  background: #c0c0c0;
+  border-style: solid;
+  border-width: 2px;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 3px 10px;
+  color: #000000;
+  white-space: nowrap;
+  user-select: none;
+  min-width: 68px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.w95-btn:hover:not(:disabled) { background: #d4d0c8; }
+.w95-btn:active:not(:disabled) {
+  border-color: #808080 #ffffff #ffffff #808080;
+  padding: 4px 9px 2px 11px;
+}
+.w95-btn:disabled {
+  color: #808080;
+  text-shadow: 1px 1px 0 #ffffff;
+  cursor: not-allowed;
+}
+.w95-btn-primary {
+  background: #c0c0c0;
+  color: #000080;
+  font-weight: bold;
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+.w95-btn-primary:hover:not(:disabled) { background: #d4d0c8; }
+
+/* ── Win95 title bar ───────────────────────────────────────── */
+.w95-titlebar {
+  background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 3px 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  user-select: none;
+  flex-shrink: 0;
+}
+.w95-titlebar-inactive {
+  background: #808080;
+}
+.w95-winctrls {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+.w95-winbtn {
+  width: 16px;
+  height: 14px;
+  background: #c0c0c0;
+  border-style: solid;
+  border-width: 1px;
+  border-color: #ffffff #404040 #404040 #ffffff;
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #000000;
+  font-weight: bold;
+  padding: 0;
+}
+.w95-winbtn:active {
+  border-color: #404040 #ffffff #ffffff #404040;
+}
+
+/* ── Win95 menu bar ────────────────────────────────────────── */
+.w95-menubar {
+  background: #c0c0c0;
+  font-size: 11px;
+  padding: 1px 4px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #808080;
+  flex-shrink: 0;
+}
+.w95-menuitem {
+  padding: 2px 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.w95-menuitem:hover { background: #000080; color: #ffffff; }
+
+/* ── Win95 inputs ──────────────────────────────────────────── */
+.w95-input {
+  background: #ffffff;
+  border-style: solid;
+  border-width: 2px;
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  padding: 2px 4px;
+  outline: none;
+  color: #000000;
+  width: 100%;
+}
+.w95-textarea {
+  background: #ffffff;
+  border-style: solid;
+  border-width: 2px;
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  padding: 3px 4px;
+  outline: none;
+  color: #000000;
+  width: 100%;
+  resize: vertical;
+}
+.w95-select {
+  background: #ffffff;
+  border-style: solid;
+  border-width: 2px;
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  padding: 1px 2px;
+  color: #000000;
+  outline: none;
+  cursor: pointer;
+}
+
+/* ── AOL chat area ─────────────────────────────────────────── */
+.aol-chat {
+  background: #ffffff;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  color: #000000;
+  overflow-y: auto;
+  padding: 4px 0;
+  flex: 1;
+}
+.aol-msg {
+  line-height: 1.5;
+  word-break: break-word;
+  padding: 3px 8px;
+  border-bottom: 1px solid #dde4f0;
+}
+.aol-msg-a { background: #f0f4ff; }
+.aol-msg-b { background: #fff2f2; }
+.aol-msg-c { background: #e8e8e8; }
+.aol-msg-a .aol-name { color: #000099; font-weight: bold; }
+.aol-msg-b .aol-name { color: #990000; font-weight: bold; }
+.aol-msg-c .aol-name { color: #444444; font-weight: bold; }
+.aol-msg-system {
+  background: none;
+  color: #808080;
+  font-style: italic;
+  font-size: 11px;
+  border-bottom-color: #ebebeb;
+}
+.aol-msg-narrator {
+  background: #fffff0;
+  border-bottom: 1px dashed #a0a060;
+  border-top: 1px dashed #a0a060;
+  margin: 4px 0;
+  font-style: italic;
+  font-size: 11px;
+  color: #555500;
+}
+.aol-msg-narrator .aol-name {
+  color: #888800;
+  font-weight: bold;
+  font-style: normal;
+}
+.aol-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  background: #000000;
+  vertical-align: text-bottom;
+  animation: blink 0.8s step-start infinite;
+  margin-left: 1px;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ── AOL member panel ──────────────────────────────────────── */
+.aol-panel-header {
+  background: #000080;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 5px;
+  user-select: none;
+}
+
+/* ── Win95 status bar ──────────────────────────────────────── */
+.w95-statusbar {
+  background: #c0c0c0;
+  border-top: 1px solid #808080;
+  font-size: 11px;
+  padding: 1px 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.w95-status-pane {
+  border-style: solid;
+  border-width: 1px;
+  border-color: #808080 #ffffff #ffffff #808080;
+  padding: 1px 6px;
+  font-size: 11px;
+}
+
+/* ── Scrollbars (WebKit) ───────────────────────────────────── */
+.w95-scrollable::-webkit-scrollbar { width: 16px; }
+.w95-scrollable::-webkit-scrollbar-track { background: #c0c0c0; }
+.w95-scrollable::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border-style: solid;
+  border-width: 2px;
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+/* One button per end — hide the extra doubled buttons */
+.w95-scrollable::-webkit-scrollbar-button:double-button { display: none; }
+.w95-scrollable::-webkit-scrollbar-button:single-button {
+  display: block;
+  height: 16px;
+  background: #c0c0c0;
+  border-style: solid;
+  border-width: 2px;
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+
+/* ── Win95 modal overlay ───────────────────────────────────── */
+.w95-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.w95-dialog {
+  background: #c0c0c0;
+  border-style: solid;
+  border-width: 2px;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  min-width: 420px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Tabs ──────────────────────────────────────────────────── */
+.w95-tab {
+  padding: 3px 7px;
+  font-size: 11px;
+  cursor: pointer;
+  border-style: solid;
+  border-width: 2px;
+  border-color: #ffffff #808080 #c0c0c0 #ffffff;
+  background: #c0c0c0;
+  margin-right: 2px;
+  user-select: none;
+  position: relative;
+  top: 2px;
+  color: #000000;
+}
+.w95-tab-active {
+  background: #c0c0c0;
+  border-bottom-color: #c0c0c0;
+  z-index: 1;
+}
+.w95-tab-inactive { background: #a0a0a0; color: #404040; }
+
+/* ── Preset list ───────────────────────────────────────────── */
+.preset-row {
+  border-bottom: 1px solid #c0c0c0;
+  padding: 4px 6px;
+  font-size: 11px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.preset-row:hover { background: #dce8ff; }
+
+/* ── Divider ───────────────────────────────────────────────── */
+.w95-divider {
+  height: 0;
+  border-top: 1px solid #808080;
+  border-bottom: 1px solid #ffffff;
+  margin: 4px 0;
+}
+
+/* ── Temperature value readout ─────────────────────────────── */
+.w95-trackbar-value {
+  background: #ffffff;
+  border-style: solid;
+  border-width: 2px;
+  border-color: #808080 #dfdfdf #dfdfdf #808080;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  padding: 1px 4px;
+  min-width: 34px;
+  text-align: center;
+  color: #000080;
 }
