@@ -689,9 +689,20 @@ export default function Home() {
     const system = buildSystemPrompt(speaking, situationRef.current, guidelinesRef.current, promptBlockOrderRef.current, charactersRef.current);
     const messages = buildChatMessages(historyIn, agentIndex, charactersRef.current, openingLineRef.current, contextWindowRef.current);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
+      let firstTokenReceived = false;
+      const loadingMsgTimer = setTimeout(() => {
+        if (!firstTokenReceived) setStatusMsg(`Loading model for ${speaking.name}...`);
+      }, 5_000);
+      const timeoutTimer = setTimeout(() => {
+        if (!firstTokenReceived) {
+          controller.abort(new Error("Timeout: Ollama took too long to respond. Is the model loaded?"));
+        }
+      }, 120_000);
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -707,6 +718,8 @@ export default function Home() {
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {
+        clearTimeout(loadingMsgTimer);
+        clearTimeout(timeoutTimer);
         const err = await res.json().catch(() => ({ error: "Unknown error" }));
         throw new Error(err.error ?? `HTTP ${res.status}`);
       }
@@ -715,10 +728,11 @@ export default function Home() {
       const decoder = new TextDecoder();
       let fullContent = "";
       let buffer = "";
+      let streamDone = false;
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done || streamDone) break;
         if (stopFlagRef.current) { reader.cancel(); break; }
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
@@ -729,6 +743,12 @@ export default function Home() {
           try {
             const chunk = JSON.parse(trimmed) as OllamaChunk;
             if (chunk.message?.content) {
+              if (!firstTokenReceived) {
+                firstTokenReceived = true;
+                clearTimeout(loadingMsgTimer);
+                clearTimeout(timeoutTimer);
+                setStatusMsg(`${speaking.name} is typing...`);
+              }
               fullContent += chunk.message.content;
               setTurns((prev) => {
                 const next = [...prev];
@@ -746,10 +766,13 @@ export default function Home() {
                 return next;
               });
             }
-            if (chunk.done) break;
+            if (chunk.done) { streamDone = true; break; }
           } catch { /* partial line */ }
         }
       }
+
+      clearTimeout(loadingMsgTimer);
+      clearTimeout(timeoutTimer);
 
       const allNames = charactersRef.current.map(c => c.name);
       const cleaned = cleanOutput(fullContent, speaking.name, allNames);
@@ -786,7 +809,21 @@ export default function Home() {
 
       runLoop((agentIndex + 1) % charactersRef.current.length, finalHistory);
     } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return; // handleStop already saved
+      if (err instanceof Error && err.name === "AbortError") {
+        const reason = controller.signal.reason;
+        if (reason instanceof Error) {
+          // Timeout-triggered abort — show error and reset state
+          setStatusMsg(`Error: ${reason.message}`);
+          setIsRunning(false);
+          setTurns((prev) => {
+            const next = [...prev];
+            if (next.length > 0) next[next.length - 1] = { ...next[next.length - 1], content: `[Timed out]`, isStreaming: false };
+            return next;
+          });
+        }
+        // else: user clicked Stop — handleStop already handled cleanup
+        return;
+      }
       const msg = err instanceof Error ? err.message : "Unknown error";
       setStatusMsg(`Error: ${msg}`);
       setIsRunning(false);

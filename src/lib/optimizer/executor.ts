@@ -25,38 +25,54 @@ interface ExecutorOptions {
   minP?: number;
   contextWindow?: number;
   stopFlag?: { current: boolean };
+  signal?: AbortSignal;
 }
+
+const CALL_TIMEOUT_MS = 600_000; // 10 minutes per LLM call (safety net only)
 
 async function callOllama(
   model: string,
   systemPrompt: string,
   messages: { role: string; content: string }[],
-  options: { temperature: number; numPredict?: number; minP?: number; stop?: string[] },
+  options: { temperature: number; numPredict?: number; minP?: number; stop?: string[]; signal?: AbortSignal },
 ): Promise<string> {
   const ollamaMessages = [
     { role: "system", content: systemPrompt },
     ...messages,
   ];
 
-  const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: ollamaMessages,
-      stream: true,
-      think: false,
-      options: {
-        temperature: options.temperature,
-        repeat_penalty: 1.05,
-        ...(options.numPredict !== undefined && { num_predict: options.numPredict }),
-        ...(options.minP !== undefined && { min_p: options.minP }),
-        ...(options.stop !== undefined && { stop: options.stop }),
-      },
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CALL_TIMEOUT_MS);
+  // If an external signal fires, forward it to this controller
+  options.signal?.addEventListener("abort", () => controller.abort(), { once: true });
+
+  let res: Response;
+  try {
+    res = await fetch(`${OLLAMA_BASE}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model,
+        messages: ollamaMessages,
+        stream: true,
+        think: false,
+        options: {
+          temperature: options.temperature,
+          repeat_penalty: 1.05,
+          ...(options.numPredict !== undefined && { num_predict: options.numPredict }),
+          ...(options.minP !== undefined && { min_p: options.minP }),
+          ...(options.stop !== undefined && { stop: options.stop }),
+        },
+      }),
+    });
+  } catch (err) {
+    clearTimeout(timeout);
+    throw err;
+  }
 
   if (!res.ok || !res.body) {
+    clearTimeout(timeout);
     throw new Error(`Ollama ${res.status}: ${await res.text().catch(() => "(no body)")}`);
   }
 
@@ -64,22 +80,28 @@ async function callOllama(
   const decoder = new TextDecoder();
   let fullContent = "";
   let buffer = "";
+  let streamDone = false;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      try {
-        const chunk = JSON.parse(trimmed) as OllamaChunk;
-        if (chunk.message?.content) fullContent += chunk.message.content;
-        if (chunk.done) break;
-      } catch { /* partial line */ }
+  try {
+    while (!streamDone) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const chunk = JSON.parse(trimmed) as OllamaChunk;
+          if (chunk.message?.content) fullContent += chunk.message.content;
+          if (chunk.done) { streamDone = true; break; }
+        } catch { /* partial line */ }
+      }
     }
+  } finally {
+    clearTimeout(timeout);
+    reader.cancel().catch(() => {});
   }
 
   return fullContent;
@@ -123,7 +145,7 @@ export async function runHeadless(
   const MAX_TURNS = options.maxTurns;
 
   while (turnCount < MAX_TURNS) {
-    if (options.stopFlag?.current) {
+    if (options.stopFlag?.current || options.signal?.aborted) {
       return { turns: history, terminationReason: "stopped" };
     }
 
@@ -155,6 +177,7 @@ export async function runHeadless(
         numPredict: speaking.numPredict ?? options.numPredict ?? 500,
         minP: options.minP ?? 0.05,
         stop,
+        signal: options.signal,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -166,8 +189,8 @@ export async function runHeadless(
     const cleaned = cleanOutput(rawContent, speaking.name, allNames);
 
     if (!cleaned) {
-      // Retry once with same agent (skip if still empty)
       agentIndex = (agentIndex + 1) % characters.length;
+      turnCount++;
       continue;
     }
 

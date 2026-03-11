@@ -3,6 +3,7 @@ import { readFile, readdir, writeFile, mkdir } from "fs/promises";
 import path from "path";
 import type { OptimizationJob, PromptConfig } from "@/lib/types";
 import { runOptimizationJob } from "@/lib/optimizer/orchestrator";
+import { registerJob } from "@/lib/optimizer/jobRegistry";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
     temperature = 0.85,
     judgeModel = "huihui_ai/qwen3.5-abliterated:latest",
     mutationModel = "huihui_ai/qwen3.5-abliterated:latest",
+    characterModel,
   } = body as {
     seedConfigName: string;
     maxGenerations?: number;
@@ -27,6 +29,7 @@ export async function POST(req: NextRequest) {
     temperature?: number;
     judgeModel?: string;
     mutationModel?: string;
+    characterModel?: string;
   };
 
   if (!seedConfigName) {
@@ -67,6 +70,7 @@ export async function POST(req: NextRequest) {
     temperature,
     judgeModel,
     mutationModel,
+    ...(characterModel ? { characterModel } : {}),
     population: [],
     stopFlag: false,
   };
@@ -76,7 +80,9 @@ export async function POST(req: NextRequest) {
   await writeFile(path.join(OPT_DIR, jobId, "config.json"), JSON.stringify(job, null, 2));
 
   // Launch orchestrator in background (fire and forget)
-  runOptimizationJob(jobId).catch((err) => {
+  const controller = new AbortController();
+  registerJob(jobId, controller);
+  runOptimizationJob(jobId, controller.signal).catch((err) => {
     console.error(`Orchestrator error for job ${jobId}:`, err);
   });
 

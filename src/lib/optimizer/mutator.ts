@@ -211,7 +211,15 @@ export async function applyMutation(
 }
 
 export function getMutationPlan(variantsPerGeneration: number): MutationField[] {
-  const base: MutationField[] = ["seed", "situation", "character_0", "character_1", "guidelines", "crossover"];
+  const base: MutationField[] = [
+    "seed",
+    "situation",
+    "character_0",
+    "character_1",
+    "character_killer",
+    "guidelines",
+    "crossover",
+  ];
   const plan: MutationField[] = [];
   for (let i = 0; i < variantsPerGeneration; i++) {
     plan.push(base[i % base.length]);

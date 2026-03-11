@@ -117,6 +117,7 @@ export type MutationField =
   | "situation"
   | "character_0"
   | "character_1"
+  | "character_killer"
   | "guidelines"
   | "seed"
   | "crossover";
@@ -133,6 +134,8 @@ export interface RatedConfig {
   mutationQuality?: "ok" | "suspect";
   parentConfigName?: string;
   terminationReason?: string;
+  isCarryover?: boolean;
+  effectiveScore?: number;
 }
 
 export interface GenerationRecord {
@@ -157,6 +160,7 @@ export interface OptimizationJob {
   temperature: number;
   judgeModel: string;
   mutationModel: string;
+  characterModel?: string; // overrides model for all roleplay agents; falls back to config's own model
   population: RatedConfig[]; // top 10 all-time by score
   stopFlag?: boolean;
   lastError?: string;
@@ -175,6 +179,7 @@ export interface OptimizationEvent {
   generation?: number;
   variant?: number;
   mutationField?: MutationField;
+  isCarryover?: boolean;
   turn?: ConversationTurn;
   runId?: string;
   turnCount?: number;

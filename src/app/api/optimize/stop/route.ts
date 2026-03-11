@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile, writeFile } from "fs/promises";
 import path from "path";
 import type { OptimizationJob } from "@/lib/types";
+import { abortJob } from "@/lib/optimizer/jobRegistry";
 
 export const runtime = "nodejs";
 
@@ -17,7 +18,9 @@ export async function POST(req: NextRequest) {
     const raw = await readFile(path.join(OPT_DIR, jobId, "state.json"), "utf-8");
     const job = JSON.parse(raw) as OptimizationJob;
     job.stopFlag = true;
+    job.status = "stopped";
     await writeFile(path.join(OPT_DIR, jobId, "state.json"), JSON.stringify(job, null, 2));
+    abortJob(jobId);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
