@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
     variantsPerGeneration = 6,
     maxTurnsPerRun = 30,
     temperature = 0.85,
-    judgeModel = "huihui_ai/qwen3.5-abliterated:latest",
-    mutationModel = "huihui_ai/qwen3.5-abliterated:latest",
+    judgeModel,
+    mutationModel,
     characterModel,
   } = body as {
     seedConfigName: string;
@@ -27,14 +27,24 @@ export async function POST(req: NextRequest) {
     variantsPerGeneration?: number;
     maxTurnsPerRun?: number;
     temperature?: number;
-    judgeModel?: string;
-    mutationModel?: string;
-    characterModel?: string;
+    judgeModel: string;
+    mutationModel: string;
+    characterModel: string;
   };
+
+  if (!judgeModel || !mutationModel || !characterModel) {
+    return NextResponse.json({ error: "judgeModel, mutationModel, and characterModel are required" }, { status: 400 });
+  }
 
   if (!seedConfigName) {
     return NextResponse.json({ error: "seedConfigName is required" }, { status: 400 });
   }
+
+  // Clamp numeric params to sensible ranges
+  const safeMaxGenerations = Math.min(100, Math.max(1, Math.round(maxGenerations)));
+  const safeVariantsPerGeneration = Math.min(20, Math.max(1, Math.round(variantsPerGeneration)));
+  const safeMaxTurnsPerRun = Math.min(200, Math.max(5, Math.round(maxTurnsPerRun)));
+  const safeTemperature = Math.min(2, Math.max(0, temperature));
 
   // Load seed config — scan directory and match by internal name field
   let seedConfig: PromptConfig | null = null;
@@ -63,11 +73,11 @@ export async function POST(req: NextRequest) {
     seedConfig,
     createdAt: new Date().toISOString(),
     status: "running",
-    currentGeneration: 1,
-    maxGenerations,
-    variantsPerGeneration,
-    maxTurnsPerRun,
-    temperature,
+    currentGeneration: 0,
+    maxGenerations: safeMaxGenerations,
+    variantsPerGeneration: safeVariantsPerGeneration,
+    maxTurnsPerRun: safeMaxTurnsPerRun,
+    temperature: safeTemperature,
     judgeModel,
     mutationModel,
     ...(characterModel ? { characterModel } : {}),
@@ -77,7 +87,6 @@ export async function POST(req: NextRequest) {
 
   await mkdir(path.join(OPT_DIR, jobId, "generations"), { recursive: true });
   await writeFile(path.join(OPT_DIR, jobId, "state.json"), JSON.stringify(job, null, 2));
-  await writeFile(path.join(OPT_DIR, jobId, "config.json"), JSON.stringify(job, null, 2));
 
   // Launch orchestrator in background (fire and forget)
   const controller = new AbortController();

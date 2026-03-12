@@ -9,11 +9,43 @@ import type {
   JobSummary,
   GenerationRecord,
 } from "@/lib/types";
+import type { EvolutionPreset } from "@/lib/types";
+
+const PRESETS_KEY = "evolutionPresets";
+
+function loadStoredPresets(): EvolutionPreset[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(PRESETS_KEY) ?? "[]") as EvolutionPreset[];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredPresets(presets: EvolutionPreset[]) {
+  localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+}
 
 const AGENT_COLORS = ["#000099", "#990000", "#555555", "#006600", "#880088"];
 const AGENT_BG = ["#f0f4ff", "#fff2f2", "#e8e8e8", "#f0fff0", "#f8f0ff"];
 
 // ── helpers ───────────────────────────────────────────────────────────────────
+
+function fmtElapsed(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}:${String(m % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  return `${m}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function shortModelName(model: string | null): string {
+  if (!model) return "";
+  // Take the part after the last "/" or show full if no slash
+  const afterSlash = model.includes("/") ? model.split("/").pop()! : model;
+  // Trim tag if it's ":latest"
+  return afterSlash.replace(/:latest$/, "");
+}
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
@@ -106,6 +138,7 @@ function W95Slider({
 
 const MUT_COLORS: Record<string, string> = {
   seed: "#555555",
+  rewrite: "#006688",
   situation: "#006600",
   character_0: "#000099",
   character_1: "#880000",
@@ -116,7 +149,7 @@ const MUT_COLORS: Record<string, string> = {
 
 function MutBadge({ field }: { field: string }) {
   const color = MUT_COLORS[field] ?? "#555";
-  const label = field === "seed" || field === "crossover" ? field : "mutated";
+  const label = field === "seed" || field === "crossover" || field === "rewrite" ? field : "mutated";
   return (
     <span style={{
       display: "inline-block", padding: "1px 5px", fontSize: 9, fontWeight: "bold",
@@ -206,21 +239,34 @@ function VariantsView({
   onBack: () => void;
   onViewTranscript: (v: RatedConfig) => void;
 }) {
-  const [expanded, setExpanded] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<Set<number>>(() => new Set(gen.variants.map((_, i) => i)));
+  // Auto-expand newly added variants (e.g. during a live run)
+  useEffect(() => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      gen.variants.forEach((_, i) => next.add(i));
+      return next;
+    });
+  }, [gen.variants.length]);
   const bestScore = gen.variants.reduce((b, v) => Math.max(b, v.rating?.total ?? -1), -1);
+  // Compute winner dynamically from scores so carryovers can't displace a higher-scoring new variant
+  const winnerIdx = gen.variants.reduce(
+    (bi, v, i) => (v.rating?.total ?? -1) > (gen.variants[bi]?.rating?.total ?? -1) ? i : bi,
+    0,
+  );
 
   return (
     <div style={{ fontSize: 11 }}>
       {/* Panel label */}
       <div style={{ padding: "4px 8px", background: "#000080", color: "#fff", fontWeight: "bold", fontSize: 11, letterSpacing: 0.5 }}>
-        Variants
+        Evolution Runs / Generations / Variants
       </div>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", background: "#e0e0e0", borderBottom: "1px solid #808080" }}>
         <button className="w95-btn" style={{ padding: "1px 6px", minWidth: "unset", fontSize: 10 }} onClick={onBack}>
           ← Gens
         </button>
-        <span style={{ fontWeight: "bold" }}>Generation {gen.index} prompts</span>
+        <span style={{ fontWeight: "bold" }}>Generation {gen.index}</span>
         <span style={{ color: "#666", fontSize: 10 }}>{gen.variants.length} variants</span>
         {bestScore >= 0 && (
           <span style={{ marginLeft: "auto", fontWeight: "bold", color: scoreColor(bestScore), fontSize: 10 }}>
@@ -231,8 +277,8 @@ function VariantsView({
 
       {/* Variant rows */}
       {gen.variants.map((v, vi) => {
-        const isElite = vi === gen.eliteIndex;
-        const isOpen = expanded === vi;
+        const isElite = vi === winnerIdx;
+        const isOpen = expanded.has(vi);
         const r = v.rating;
 
         return (
@@ -244,22 +290,25 @@ function VariantsView({
                 padding: "5px 8px", cursor: "pointer",
                 background: isElite ? "#fffbe6" : vi % 2 === 0 ? "#fff" : "#f8f8f8",
               }}
-              onClick={() => setExpanded(isOpen ? null : vi)}
+              onClick={() => setExpanded((prev) => { const next = new Set(prev); isOpen ? next.delete(vi) : next.add(vi); return next; })}
             >
-              {isElite && <span style={{ color: "#886600", fontSize: 11 }}>★</span>}
-              <MutBadge field={v.mutationField} />
-              {v.isCarryover && (
-                <span style={{ fontSize: 9, color: "#808080", fontStyle: "italic" }}>↩ carried</span>
-              )}
-              <span style={{ fontWeight: "bold", fontSize: 10, minWidth: 38, textAlign: "right", color: scoreColor(r?.total ?? null) }}>
+              {isElite && <span style={{ color: "#886600", fontSize: 11, flexShrink: 0 }}>★</span>}
+              <span style={{
+                display: "inline-block", padding: "1px 5px", fontSize: 9, fontWeight: "bold", flexShrink: 0,
+                background: isElite ? "#886600" : v.isCarryover ? "#555555" : "#000080",
+                color: "#fff", borderRadius: 2, whiteSpace: "nowrap",
+              }}>
+                {isElite ? `gen ${gen.index} winner` : v.isCarryover ? "carried" : "new variant"}
+              </span>
+              <span style={{ fontWeight: "bold", fontSize: 10, minWidth: 38, textAlign: "right", color: scoreColor(r?.total ?? null), flexShrink: 0 }}>
                 {r ? `${r.total}/50` : "—"}
               </span>
+              <span style={{ color: "#666", fontSize: 10, flexShrink: 0 }}>{v.turnCount} turns</span>
               {v.effectiveScore !== undefined && v.effectiveScore > 0 && v.effectiveScore !== r?.total && (
-                <span style={{ fontSize: 9, color: "#808080" }}>eff:{v.effectiveScore}</span>
+                <span style={{ fontSize: 9, color: "#808080", flexShrink: 0 }}>eff: {v.effectiveScore}/50</span>
               )}
-              <span style={{ color: "#666", fontSize: 10 }}>{v.turnCount}t</span>
               <span style={{ flex: 1, color: v.terminationReason === "error" ? "#880000" : "#888", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {v.terminationReason === "error" ? "ollama error" : (v.terminationReason ?? "")}
+                {v.terminationReason === "error" ? "error" : (v.terminationReason ?? "")}
               </span>
               <span style={{ fontSize: 10, color: "#808080" }}>{isOpen ? "▲" : "▼"}</span>
             </div>
@@ -379,7 +428,7 @@ function GenerationsView({
     return (
       <div style={{ fontSize: 11 }}>
         <div style={{ padding: "4px 8px", background: "#000080", color: "#fff", fontWeight: "bold", fontSize: 11, letterSpacing: 0.5 }}>
-          Generations
+          Evolution Runs / Generations
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", background: "#e0e0e0", borderBottom: "1px solid #808080" }}>
           <button className="w95-btn" style={{ padding: "1px 6px", minWidth: "unset", fontSize: 10 }} onClick={onBack}>← Runs</button>
@@ -396,7 +445,7 @@ function GenerationsView({
     <div style={{ fontSize: 11 }}>
       {/* Panel label */}
       <div style={{ padding: "4px 8px", background: "#000080", color: "#fff", fontWeight: "bold", fontSize: 11, letterSpacing: 0.5 }}>
-        Generations
+        Evolution Runs / Generations
       </div>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", background: "#e0e0e0", borderBottom: "1px solid #808080" }}>
@@ -413,7 +462,10 @@ function GenerationsView({
       ) : (
         [...generations].reverse().map((gen) => {
           const bestScore = gen.variants.reduce((b, v) => Math.max(b, v.rating?.total ?? -1), -1);
-          const elite = gen.variants[gen.eliteIndex];
+          const elite = gen.variants.reduce((best, v) =>
+            (v.rating?.total ?? -1) > (best?.rating?.total ?? -1) ? v : best,
+            gen.variants[0],
+          );
           const originalIdx = generations.indexOf(gen);
           return (
             <div
@@ -432,9 +484,8 @@ function GenerationsView({
                 </span>
               </div>
               {elite?.rating && (
-                <div style={{ fontSize: 10, color: "#555", display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
-                  <span>★</span>
-                  <MutBadge field={elite.mutationField} />
+                <div style={{ fontSize: 10, color: "#555", display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap", overflow: "hidden" }}>
+                  <span style={{ color: "#886600", flexShrink: 0 }}>★</span>
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
                     {elite.rating.summary?.slice(0, 90) ?? ""}
                   </span>
@@ -545,6 +596,7 @@ function JobsView({
 export default function OptimizePage() {
   const [configs, setConfigs] = useState<string[]>([]);
   const [models, setModels] = useState<string[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
   const [jobs, setJobs] = useState<JobSummary[]>([]);
 
   // Job config form
@@ -553,9 +605,9 @@ export default function OptimizePage() {
   const [variantsPerGen, setVariantsPerGen] = useState(6);
   const [maxTurns, setMaxTurns] = useState(30);
   const [temperature, setTemperature] = useState(0.85);
-  const [judgeModel, setJudgeModel] = useState("huihui_ai/qwen3.5-abliterated:latest");
-  const [mutationModel, setMutationModel] = useState("huihui_ai/qwen3.5-abliterated:latest");
-  const [characterModel, setCharacterModel] = useState("huihui_ai/qwen3.5-abliterated:latest");
+  const [judgeModel, setJudgeModel] = useState("llama-3.3-70b-versatile");
+  const [mutationModel, setMutationModel] = useState("llama-3.3-70b-versatile");
+  const [characterModel, setCharacterModel] = useState("llama-3.1-8b-instant");
 
   // Active job state
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
@@ -565,7 +617,17 @@ export default function OptimizePage() {
 
   // Live feed
   const [liveTurns, setLiveTurns] = useState<ConversationTurn[]>([]);
+  const [streamingTurn, setStreamingTurn] = useState<ConversationTurn | null>(null);
   const [liveVariantInfo, setLiveVariantInfo] = useState("");
+  const [evaluatorTokens, setEvaluatorTokens] = useState("");
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [evaluatorPhase, setEvaluatorPhase] = useState<string>("evaluate");
+
+  // Ollama model status
+  const [ollamaModel, setOllamaModel] = useState<string | null>(null);
+  const [ollamaRole, setOllamaRole] = useState<string | null>(null);
+  const [ollamaModelStartedAt, setOllamaModelStartedAt] = useState<number | null>(null);
+  const [ollamaElapsed, setOllamaElapsed] = useState<number>(0);
 
   // Drill-down navigation
   const [drillJobId, setDrillJobId] = useState<string | null>(null);
@@ -573,28 +635,123 @@ export default function OptimizePage() {
   const [drillGenIndex, setDrillGenIndex] = useState<number | null>(null);
   const [jobSortMode, setJobSortMode] = useState<"recent" | "score">("recent");
 
+  // Presets
+  const [userPresets, setUserPresets] = useState<EvolutionPreset[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState("");
+
   // Transcript dialog
   const [viewingVariant, setViewingVariant] = useState<RatedConfig | null>(null);
 
+  // Resizable divider
+  const [leftWidth, setLeftWidth] = useState(420);
+
   const feedRef = useRef<HTMLDivElement>(null);
   const sseRef = useRef<EventSource | null>(null);
+  const isDraggingDivider = useRef(false);
+  const handleEventRef = useRef<((event: OptimizationEvent) => void) | null>(null);
+
+  // Elapsed timer for active model
+  useEffect(() => {
+    if (!ollamaModelStartedAt) { setOllamaElapsed(0); return; }
+    const tick = () => setOllamaElapsed(Date.now() - ollamaModelStartedAt);
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [ollamaModelStartedAt]);
+
+  // ── preset helpers ───────────────────────────────────────────────────────────
+
+  function applyPreset(preset: EvolutionPreset) {
+    setSeedConfig(preset.seedConfigName);
+    setMaxGenerations(preset.maxGenerations);
+    setVariantsPerGen(preset.variantsPerGeneration);
+    setMaxTurns(preset.maxTurnsPerRun);
+    setTemperature(preset.temperature);
+    setJudgeModel(preset.judgeModel);
+    setMutationModel(preset.mutationModel);
+    setCharacterModel(preset.characterModel);
+  }
+
+  function handleSavePreset() {
+    const existing = userPresets.find((p) => p.id === selectedPresetId);
+
+    if (existing) {
+      // Overwrite the currently selected preset
+      const updated = userPresets.map((p) =>
+        p.id === selectedPresetId
+          ? {
+              ...p,
+              seedConfigName: seedConfig,
+              maxGenerations,
+              variantsPerGeneration: variantsPerGen,
+              maxTurnsPerRun: maxTurns,
+              temperature,
+              judgeModel,
+              mutationModel,
+              characterModel,
+            }
+          : p,
+      );
+      setUserPresets(updated);
+      saveStoredPresets(updated);
+    } else {
+      // No preset selected — prompt for a new name
+      const name = window.prompt("Preset name:");
+      if (!name?.trim()) return;
+      const preset: EvolutionPreset = {
+        id: String(Date.now()),
+        name: name.trim(),
+        description: "",
+        seedConfigName: seedConfig,
+        maxGenerations,
+        variantsPerGeneration: variantsPerGen,
+        maxTurnsPerRun: maxTurns,
+        temperature,
+        judgeModel,
+        mutationModel,
+        characterModel,
+      };
+      const updated = [...userPresets, preset];
+      setUserPresets(updated);
+      saveStoredPresets(updated);
+      setSelectedPresetId(preset.id);
+    }
+  }
+
+  function handleDeletePreset() {
+    if (!selectedPresetId) return;
+    const updated = userPresets.filter((p) => p.id !== selectedPresetId);
+    setUserPresets(updated);
+    saveStoredPresets(updated);
+    setSelectedPresetId("");
+  }
 
   // ── data loading ────────────────────────────────────────────────────────────
 
   useEffect(() => {
+    setUserPresets(loadStoredPresets());
     fetch("/api/prompts")
       .then((r) => r.json())
       .then((d) => setConfigs((d.configs ?? []).map((c: { name: string }) => c.name)))
-      .catch(() => {});
+      .catch((err) => console.error("[optimize] Failed to load prompt configs:", err));
 
+    setModelsLoading(true);
     fetch("/api/models")
       .then((r) => r.json())
       .then((d) => {
-        const names = (d.models ?? []).map((m: { name: string }) => m.name);
+        const names: string[] = d.models ?? [];
         setModels(names);
-        if (names.length > 0 && !judgeModel) setJudgeModel(names[0]);
+        if (names.length > 0) {
+          // Pick most capable model for judge/mutation (largest), fastest for characters
+          const smartModel = names.find(n => n.includes("120b") || n.includes("70b")) ?? names[0];
+          const fastModel = names.find(n => n.includes("8b")) ?? names[names.length - 1];
+          setJudgeModel(smartModel);
+          setMutationModel(smartModel);
+          setCharacterModel(fastModel);
+        }
       })
-      .catch(() => {});
+      .catch((err) => console.error("[optimize] Failed to load models:", err))
+      .finally(() => setModelsLoading(false));
 
     loadJobs();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -603,14 +760,14 @@ export default function OptimizePage() {
     fetch("/api/optimize/jobs")
       .then((r) => r.json())
       .then((d) => setJobs(d.jobs ?? []))
-      .catch(() => {});
+      .catch((err) => console.error("[optimize] Failed to load jobs:", err));
   }
 
   function loadDrillDetail(jobId: string) {
     fetch(`/api/optimize/jobs/${jobId}`)
       .then((r) => r.json())
       .then((d) => setDrillJobDetail({ job: d.job, generations: d.generations ?? [] }))
-      .catch(() => {});
+      .catch((err) => console.error("[optimize] Failed to load job detail:", err));
   }
 
   // ── SSE subscription ────────────────────────────────────────────────────────
@@ -623,7 +780,7 @@ export default function OptimizePage() {
     es.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data) as OptimizationEvent;
-        handleEvent(event);
+        handleEventRef.current?.(event);
       } catch { /* ignore parse errors */ }
     };
 
@@ -636,8 +793,23 @@ export default function OptimizePage() {
 
   function handleEvent(event: OptimizationEvent) {
     switch (event.type) {
+      case "turn_token":
+        if (event.agentIndex !== undefined && event.token) {
+          setStreamingTurn((prev) => {
+            if (prev && prev.agentIndex === event.agentIndex) {
+              return { ...prev, content: prev.content + event.token! };
+            }
+            return { agentIndex: event.agentIndex!, agentName: event.agentName ?? "", content: event.token!, isStreaming: true };
+          });
+          setTimeout(() => {
+            if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
+          }, 50);
+        }
+        break;
+
       case "turn_complete":
         if (event.turn) {
+          setStreamingTurn(null);
           setLiveTurns((prev) => [...prev, event.turn!]);
           setTimeout(() => {
             if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
@@ -646,19 +818,51 @@ export default function OptimizePage() {
         break;
 
       case "mutation_complete":
+        setStatusLine(`Gen ${event.generation} Var ${(event.variant ?? 0) + 1}: mutating...`);
+        setEvaluatorTokens("");
+        setIsEvaluating(false);
+        break;
+
+      case "run_start":
+        // Clear the live feed for each new variant run — this is the key visual separator
         setLiveVariantInfo(
-          `Gen ${event.generation} — Variant ${(event.variant ?? 0) + 1} — Mutation: ${event.mutationField ?? "seed"}`,
+          `Gen ${event.generation} — Variant ${(event.variant ?? 0) + 1}`,
         );
+        setStatusLine(`Gen ${event.generation} Var ${(event.variant ?? 0) + 1}: running...`);
         setLiveTurns([]);
+        setStreamingTurn(null);
+        setEvaluatorTokens("");
+        setIsEvaluating(false);
         break;
 
       case "run_complete":
         setStatusLine(
-          `Gen ${event.generation} Var ${(event.variant ?? 0) + 1}: run done (${event.turnCount} turns). Rating...`,
+          `Gen ${event.generation} Var ${(event.variant ?? 0) + 1}: run done (${event.turnCount} turns)`,
         );
+        setStreamingTurn(null);
+        // Refresh drill-down so variant data appears in the run viewer immediately
+        if (event.jobId) loadDrillDetail(event.jobId);
+        break;
+
+      case "evaluator_token":
+        if (event.token) {
+          if (event.phase) {
+            setEvaluatorPhase((prev) => {
+              if (prev !== event.phase) setEvaluatorTokens(""); // Clear tokens on phase change
+              return event.phase!;
+            });
+          }
+          setIsEvaluating(true);
+          setEvaluatorTokens((prev) => prev + event.token);
+          setTimeout(() => {
+            if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
+          }, 50);
+        }
         break;
 
       case "rating_complete":
+        setIsEvaluating(false);
+        setEvaluatorTokens("");
         setStatusLine(
           `Gen ${event.generation} Var ${(event.variant ?? 0) + 1}: rated ${event.rating?.total ?? "null"}/50`,
         );
@@ -679,10 +883,26 @@ export default function OptimizePage() {
         break;
 
       case "job_complete":
-        setStatusLine("Job complete.");
-        setJobStatus((prev) => (prev ? { ...prev, status: "complete" } : prev));
+        setStatusLine((prev) => prev?.startsWith("Error:") ? prev : "Job complete.");
+        setJobStatus((prev) => {
+          if (!prev) return prev;
+          // Don't override error status — job_complete just means the orchestrator exited
+          if (prev.status === "error") return prev;
+          return { ...prev, status: "complete" };
+        });
+        setOllamaModel(null);
+        setOllamaRole(null);
+        setOllamaModelStartedAt(null);
+        setIsEvaluating(false);
         loadJobs();
-        if (activeJobId) loadDrillDetail(activeJobId);
+        if (activeJobId) {
+          loadDrillDetail(activeJobId);
+          // Fetch real status from server (may be "error" or "stopped")
+          fetch(`/api/optimize/status?jobId=${activeJobId}`)
+            .then((r) => r.json())
+            .then((job: OptimizationJob) => setJobStatus(job))
+            .catch(() => {});
+        }
         break;
 
       case "error":
@@ -690,8 +910,27 @@ export default function OptimizePage() {
         setJobStatus((prev) => (prev ? { ...prev, status: "error" } : prev));
         loadJobs();
         break;
+
+      case "ollama_status":
+        if (event.ollamaAction === "start") {
+          setOllamaModel(event.ollamaModel ?? null);
+          setOllamaRole(event.ollamaRole ?? null);
+          setOllamaModelStartedAt(Date.now());
+          if (event.ollamaRole === "rewrite") {
+            setEvaluatorTokens("");
+            setIsEvaluating(true);
+          }
+        } else if (event.ollamaAction === "unload") {
+          setOllamaModel(null);
+          setOllamaRole(null);
+          setOllamaModelStartedAt(null);
+        }
+        break;
     }
   }
+
+  // Keep handleEventRef in sync so subscribeSSE never holds a stale closure
+  handleEventRef.current = handleEvent;
 
   // ── actions ─────────────────────────────────────────────────────────────────
 
@@ -699,7 +938,10 @@ export default function OptimizePage() {
     if (!seedConfig) return;
     setStatusLine("Starting job...");
     setLiveTurns([]);
+    setStreamingTurn(null);
     setPopulation([]);
+    setEvaluatorTokens("");
+    setIsEvaluating(false);
 
     const res = await fetch("/api/optimize/start", {
       method: "POST",
@@ -761,13 +1003,29 @@ export default function OptimizePage() {
         setPopulation(job.population ?? []);
         setStatusLine(`Job ${jobId}: ${job.status}`);
       })
-      .catch(() => {});
+      .catch((err) => console.error("[optimize] Failed to load job status:", err));
 
     loadDrillDetail(jobId);
     subscribeSSE(jobId);
   }
 
   const isRunning = jobStatus?.status === "running";
+
+  function onDividerMouseDown(e: React.MouseEvent) {
+    e.preventDefault();
+    isDraggingDivider.current = true;
+    const onMove = (ev: MouseEvent) => {
+      if (!isDraggingDivider.current) return;
+      setLeftWidth(Math.max(260, Math.min(700, ev.clientX)));
+    };
+    const onUp = () => {
+      isDraggingDivider.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
 
   // ── render ──────────────────────────────────────────────────────────────────
 
@@ -793,12 +1051,47 @@ export default function OptimizePage() {
       <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
 
         {/* LEFT PANEL — controls + hierarchical browser */}
-        <div style={{ width: 420, flexShrink: 0, display: "flex", flexDirection: "column", borderRight: "2px solid #808080", overflow: "hidden" }}>
+        <div style={{ width: leftWidth, flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
           {/* Job control form */}
           <div style={{ padding: "6px 8px", borderBottom: "1px solid #808080", background: "#c0c0c0" }}>
-            <div style={{ fontWeight: "bold", fontSize: 11, marginBottom: 4, color: "#000080" }}>
-              Evolution Circuit
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+              <div style={{ fontWeight: "bold", fontSize: 11, color: "#000080", whiteSpace: "nowrap" }}>
+                Evolution Circuit
+              </div>
+              <select
+                className="w95-select"
+                style={{ fontSize: 10, flex: 1, minWidth: 0 }}
+                value={selectedPresetId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSelectedPresetId(id);
+                  const preset = userPresets.find((p) => p.id === id);
+                  if (preset) applyPreset(preset);
+                }}
+              >
+                <option value="">— presets —</option>
+                {userPresets.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <button
+                className="w95-btn"
+                style={{ fontSize: 10, padding: "1px 6px", whiteSpace: "nowrap", flexShrink: 0 }}
+                onClick={handleSavePreset}
+                title={selectedPresetId ? "Overwrite selected preset" : "Save current settings as a new preset"}
+              >
+                Save
+              </button>
+              <button
+                className="w95-btn"
+                style={{ fontSize: 10, padding: "1px 6px", flexShrink: 0 }}
+                onClick={handleDeletePreset}
+                disabled={!selectedPresetId}
+                title="Delete selected preset"
+              >
+                ✕
+              </button>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 10px", fontSize: 11 }}>
@@ -836,7 +1129,7 @@ export default function OptimizePage() {
               <div>
                 <label style={{ display: "block", marginBottom: 1 }}>Max Turns / Run</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <W95Slider min={5} max={100} step={5} value={maxTurns} onChange={setMaxTurns} />
+                  <W95Slider min={5} max={100} step={1} value={maxTurns} onChange={setMaxTurns} />
                   <span className="w95-trackbar-value">{maxTurns}</span>
                 </div>
               </div>
@@ -850,32 +1143,39 @@ export default function OptimizePage() {
               </div>
 
               <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ display: "block", marginBottom: 1 }}>Evolution Model <span style={{ fontSize: 9, color: "#666" }}>(rates + mutates)</span></label>
+                <label style={{ display: "block", marginBottom: 1 }}>
+                  Evolution Model <span style={{ fontSize: 9, color: "#666" }}>(rates + mutates)</span>
+                  {modelsLoading && <span style={{ fontSize: 9, color: "#886600", marginLeft: 6 }}>starting ollama...</span>}
+                </label>
                 <select
                   className="w95-select"
                   value={judgeModel}
                   onChange={(e) => { setJudgeModel(e.target.value); setMutationModel(e.target.value); }}
                   style={{ width: "100%" }}
+                  disabled={modelsLoading}
                 >
-                  <option key={judgeModel} value={judgeModel}>{judgeModel}</option>
-                  {models.filter((m) => m !== judgeModel).map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
+                  {modelsLoading
+                    ? <option value="">Loading models...</option>
+                    : models.map((m) => <option key={m} value={m}>{m}</option>)
+                  }
                 </select>
               </div>
 
               <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ display: "block", marginBottom: 1 }}>Character Model <span style={{ fontSize: 9, color: "#666" }}>(roleplay agents)</span></label>
+                <label style={{ display: "block", marginBottom: 1 }}>
+                  Character Model <span style={{ fontSize: 9, color: "#666" }}>(roleplay agents)</span>
+                </label>
                 <select
                   className="w95-select"
                   value={characterModel}
                   onChange={(e) => setCharacterModel(e.target.value)}
                   style={{ width: "100%" }}
+                  disabled={modelsLoading}
                 >
-                  <option value={characterModel}>{characterModel}</option>
-                  {models.filter((m) => m !== characterModel).map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
+                  {modelsLoading
+                    ? <option value="">Loading models...</option>
+                    : models.map((m) => <option key={m} value={m}>{m}</option>)
+                  }
                 </select>
               </div>
             </div>
@@ -886,14 +1186,14 @@ export default function OptimizePage() {
                 onClick={handleStart}
                 disabled={!seedConfig || isRunning}
               >
-                Start Job
+                ▶ Start
               </button>
               <button
                 className="w95-btn"
                 onClick={handleStop}
                 disabled={!activeJobId || !isRunning}
               >
-                Stop
+                ⏸ Stop
               </button>
               {activeJobId && (
                 <span style={{ fontSize: 10, color: "#666", alignSelf: "center" }}>
@@ -939,16 +1239,74 @@ export default function OptimizePage() {
           </div>
         </div>
 
+        {/* Resizable divider */}
+        <div
+          onMouseDown={onDividerMouseDown}
+          style={{
+            width: 5, flexShrink: 0, cursor: "col-resize",
+            background: "#808080",
+            borderLeft: "1px solid #404040", borderRight: "1px solid #ffffff",
+          }}
+        />
+
         {/* RIGHT PANEL — live feed */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
           <div
             className="aol-panel-header"
-            style={{ padding: "3px 8px", fontSize: 11, display: "flex", alignItems: "center", gap: 8 }}
+            style={{ padding: "3px 8px", fontSize: 11, display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap", overflow: "hidden" }}
           >
-            <span style={{ fontWeight: "bold" }}>Live Simulation Feed</span>
+            <span style={{ fontWeight: "bold", whiteSpace: "nowrap" }}>Live Simulation Feed</span>
             {liveVariantInfo && (
-              <span style={{ opacity: 0.85 }}>— {liveVariantInfo}</span>
+              <span style={{ opacity: 0.85, whiteSpace: "nowrap" }}>— {liveVariantInfo}</span>
             )}
+            {(liveTurns.length > 0 || streamingTurn) && (
+              <span style={{ opacity: 0.7, whiteSpace: "nowrap" }}>
+                — Turn {liveTurns.length + (streamingTurn ? 1 : 0)}
+              </span>
+            )}
+            <span style={{ flex: 1 }} />
+            {/* Ollama model status */}
+            <span style={{ display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", flexShrink: 0 }}>
+              <span style={{
+                width: 7, height: 7, borderRadius: "50%",
+                background: ollamaModel ? "#00aa00" : "#808080",
+                flexShrink: 0,
+                boxShadow: ollamaModel ? "0 0 3px #00cc00" : "none",
+              }} />
+              {ollamaModel ? (
+                <>
+                  <span style={{ fontWeight: "bold", letterSpacing: 0.3 }}>{shortModelName(ollamaModel)}</span>
+                  {ollamaRole && (
+                    <span style={{
+                      background: ollamaRole === "character" ? "#000080" : ollamaRole === "judge" ? "#800000" : "#006600",
+                      color: "#fff",
+                      padding: "0 3px",
+                      fontSize: 9,
+                      fontWeight: "bold",
+                      letterSpacing: 0.5,
+                    }}>
+                      {ollamaRole.toUpperCase()}
+                    </span>
+                  )}
+                  <span style={{ color: "#444" }}>{fmtElapsed(ollamaElapsed)}</span>
+                </>
+              ) : (
+                <span style={{ color: "#808080", opacity: 0.6 }}>idle</span>
+              )}
+            </span>
+            {/* Status message */}
+            <span style={{
+              borderLeft: "1px solid #808080",
+              paddingLeft: 6,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: 220,
+              color: statusLine.startsWith("Error:") ? "#880000" : undefined,
+              flexShrink: 1,
+            }}>
+              {statusLine}
+            </span>
           </div>
 
           <div
@@ -956,22 +1314,45 @@ export default function OptimizePage() {
             className="aol-chat w95-deep-inset w95-scrollable"
             style={{ flex: 1, overflowY: "auto" }}
           >
-            {liveTurns.length === 0 ? (
+            {liveTurns.length === 0 && !streamingTurn && !isEvaluating ? (
               <div className="aol-msg aol-msg-system">
                 {activeJobId ? "Waiting for first turn..." : "Start a job to see live dialogue here."}
               </div>
             ) : (
-              liveTurns.map((turn, i) => {
-                const colorIdx = turn.agentIndex % AGENT_COLORS.length;
-                return (
-                  <div key={i} className="aol-msg" style={{ background: AGENT_BG[colorIdx] }}>
-                    <span style={{ color: AGENT_COLORS[colorIdx], fontWeight: "bold", fontSize: 11 }}>
-                      {turn.agentName}:{" "}
-                    </span>
-                    <span style={{ fontSize: 12 }}>{turn.content}</span>
+              <>
+                {liveTurns.map((turn, i) => {
+                  const colorIdx = turn.agentIndex % AGENT_COLORS.length;
+                  return (
+                    <div key={i} className="aol-msg" style={{ background: AGENT_BG[colorIdx] }}>
+                      <span style={{ color: AGENT_COLORS[colorIdx], fontWeight: "bold", fontSize: 11 }}>
+                        {turn.agentName}:{" "}
+                      </span>
+                      <span style={{ fontSize: 12 }}>{turn.content}</span>
+                    </div>
+                  );
+                })}
+                {streamingTurn && (() => {
+                  const colorIdx = streamingTurn.agentIndex % AGENT_COLORS.length;
+                  return (
+                    <div className="aol-msg" style={{ background: AGENT_BG[colorIdx], opacity: 0.9 }}>
+                      <span style={{ color: AGENT_COLORS[colorIdx], fontWeight: "bold", fontSize: 11 }}>
+                        {streamingTurn.agentName}:{" "}
+                      </span>
+                      <span style={{ fontSize: 12 }}>{streamingTurn.content}<span style={{ opacity: 0.5 }}>▌</span></span>
+                    </div>
+                  );
+                })()}
+                {isEvaluating && (
+                  <div style={{ padding: "6px 8px", background: "#f0f0e8", borderTop: (liveTurns.length > 0 || streamingTurn) ? "2px solid #ccaa00" : "none" }}>
+                    <div style={{ fontSize: 10, color: "#886600", fontWeight: "bold", marginBottom: 4, letterSpacing: 0.3 }}>
+                      ⚙ {evaluatorPhase === "bootstrap" ? "Bootstrapping next variant..." : evaluatorPhase === "mutate" ? "Mutation model generating variant..." : "Judge model evaluating..."}
+                    </div>
+                    <div style={{ fontFamily: "monospace", fontSize: 10, color: "#444", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+                      {evaluatorTokens || "..."}
+                    </div>
                   </div>
-                );
-              })
+                )}
+              </>
             )}
           </div>
 

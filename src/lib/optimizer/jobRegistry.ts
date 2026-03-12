@@ -18,6 +18,10 @@ export function abortJob(jobId: string): void {
   }
 }
 
+export function isJobRegistered(jobId: string): boolean {
+  return registry.has(jobId);
+}
+
 export function unregisterJob(jobId: string): void {
   registry.delete(jobId);
 }

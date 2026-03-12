@@ -12,6 +12,9 @@ export async function GET(req: NextRequest) {
   if (!jobId) {
     return new Response("jobId required", { status: 400 });
   }
+  if (!/^[a-zA-Z0-9_-]+$/.test(jobId)) {
+    return new Response("invalid jobId", { status: 400 });
+  }
 
   const encoder = new TextEncoder();
 
@@ -23,7 +26,13 @@ export async function GET(req: NextRequest) {
         const raw = await readFile(eventsPath, "utf-8");
         const lines = raw.split("\n").filter((l) => l.trim());
         for (const line of lines) {
-          controller.enqueue(encoder.encode(`data: ${line}\n\n`));
+          try {
+            const evt = JSON.parse(line) as { type?: string };
+            // Don't replay terminal events — the job's status field already reflects these
+            // and replaying them causes stale error/complete messages to overwrite the UI.
+            if (evt.type === "error" || evt.type === "job_complete") continue;
+            controller.enqueue(encoder.encode(`data: ${line}\n\n`));
+          } catch { /* malformed line — skip */ }
         }
       } catch { /* no events yet */ }
 

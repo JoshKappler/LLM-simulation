@@ -6,7 +6,7 @@ import type { OptimizationJob, JobSummary } from "@/lib/types";
 export const runtime = "nodejs";
 
 const OPT_DIR = path.join(process.cwd(), "optimization");
-const STALE_MS = 2 * 60 * 1000; // 2 minutes
+const STALE_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 export async function GET() {
   try {
@@ -33,7 +33,7 @@ export async function GET() {
         const bestScore =
           job.population.length > 0
             ? job.population.reduce<number | null>((best, v) => {
-                const s = v.rating?.total ?? null;
+                const s = v.effectiveScore ?? v.rating?.total ?? null;
                 if (s === null) return best;
                 return best === null ? s : Math.max(best, s);
               }, null)

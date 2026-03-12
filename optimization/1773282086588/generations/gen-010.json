@@ -1,0 +1,566 @@
+{
+  "index": 10,
+  "startedAt": "2026-03-12T02:27:40.809Z",
+  "completedAt": "2026-03-12T02:28:24.780Z",
+  "variants": [
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite]",
+        "situation": "You're trapped in a dark, damp cave, the only sound the steady drip of water echoing off the cold stone walls. A faint, flickering glow emanates from a lantern hung from the low ceiling, casting eerie shadows on the rough-hewn rocks. The air is heavy with the stench of mold and decay. The Butcher, a towering figure in a tattered black cloak, stands before you, a cruel grin spreading across his face as he holds a rusty old axe. A crude, hand-scrawled message scrawled on the wall reads 'One will walk out, one will feed the darkness' and a weathered old hourglass perched on a nearby rock displays 10 minutes of trickling sand. The Butcher's voice is low and menacing as he reminds you that when the sand runs out, you'll both be dragged deeper into the cave, never to see the light of day again.",
+        "guidelines": "Respond with 1-3 sentences, speaking from the heart and reacting to the terror that surrounds you. Don't try to be a hero or a strategist – just let your emotions guide your words.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're a devoted partner, and the thought of leaving your loved one behind is unbearable. Your mind is reeling with the horror of your situation, and the darkness seems to be closing in around you.",
+            "primer": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+            "numPredict": 70
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're a fiercely independent individual, but the crushing weight of your predicament is starting to suffocate you. Your thoughts are a jumbled mix of fear, anger, and desperation as you struggle to come to terms with the cruel fate that's been thrust upon you.",
+            "primer": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+            "numPredict": 70
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "You hold the power of life and death over these two prisoners. They must decide which one will be spared, or you'll condemn them both to the depths of the cave when the sand runs out. Remind them of the ticking clock and the horrors that await them if they fail to agree. When they reach a decision, carry out the sentence. Output 'RESOLVED' on its own line when the scenario ends.",
+            "primer": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+            "numPredict": 300
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773282196605",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, no, no, this can't be happening... Kaelie, please, we have to think, we have to find a way out of this, I won't let them hurt you, I won't let them take you from me... oh god, what are we going to do?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Stop, just stop, Elias... your words, they're just making this worse. We can't escape, we can't save each other. One of us has to die, and it's either me or you. I don't know if I can make that choice, but the thought of living without you is tearing me apart.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, Kaelie, don't say that... I won't let you die, I won't let them take you from me. The thought of living without you is unbearable, it's like asking me to give up my own heart, my own soul. I'd rather die a thousand times than let anything happen to you, my love.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "No, Elias, don't say that, please... I couldn't bear it if anything happened to you either. The thought of living without you is like drowning in darkness, it's suffocating me. But what choice do we have, what can we do? Oh god, I'm so scared, I don't want to lose you, I don't want to die...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(sneering) Oh, how touching. The star-crossed lovers, torn apart by their own desperation. Five minutes left. You're running out of time to make your decision. Don't think for a second that I'll show you mercy. I won't be swayed by your tears or your declarations of love. You have one choice: decide which one of you dies, or you both will suffer the same fate. The cave will swallow you whole, and no one will ever find you. The darkness will consume you, and your screams will be silenced forever. Make. Your. Decision. (tapping foot impatiently) Time's running out...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie, my love, I... I don't know what to do, I'm so scared, I just want to hold you and keep you safe, but... but I know I have to protect you, no matter what. I'd rather die than let you suffer, I'd rather die than live without you, but if it means saving you... oh god, I don't know if I can do this, but I have to try.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Elias, no, don't say that, please don't sacrifice yourself for me. I couldn't live with myself if you died because of me. I love you too, and the thought of living without you is like being ripped apart from the inside out. But at the same time, I don't want you to suffer, I don't want you to die. Oh god, this is unbearable, it's like our love is being twisted into a cruel, sadistic game. ( sobbing ) I don't know what to do, I don't know what to choose...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(desperate and tears-filled) Kaelie, my love, don't cry, please don't cry... I'll do anything, anything to make this stop, to take away your pain. I'd give my life for you in a heartbeat, but the thought of you giving yours for me is... it's too much to bear. We can't choose, we can't play this twisted game, it's not fair, it's not right. (voice cracking) We should be together, we should be holding each other, not deciding who gets to live and who gets to die. (choking back a sob) Oh, Kaelie, what are we going to do?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(between sobs) Elias, I don't know, I don't know what to do... this is madness, this is hell. We're being forced to choose between our own lives, to decide who gets to walk out of this nightmare and who gets to stay behind. ( voice shaking ) It's not fair, it's not right, you're right. We should be fighting together, not against each other. ( desperation creeping in ) Oh god, Elias, what if we refuse to choose? What if we just won't play along? Will he really kill us both? ( grabbing Elias' arm, eyes wild with fear ) Tell me we won't give in, tell me we'll find a way out of this, together.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(laughing menacingly) Oh, you think you can defy me? You think you can refuse to play along? (sneering) I'll show you what happens to those who don't comply. You'll get to experience the true meaning of suffering. (taking a step closer) If you don't make a decision, I'll make sure that your deaths are slow and agonizing. You'll beg for mercy, you'll beg for death, but it won't come. Not until you've suffered enough. (eyes glinting with sadistic pleasure) And as for finding a way out of this, together? (chuckling) You're chained to the ground, dear lovers. You're not going anywhere. The only way out is for one of you to die. (glancing at the clock) Two minutes left. You're running out of time. Make your decision, or suffer the consequences. (leaning in, his voice takes on a sinister tone) I'm enjoying this, by the way. The desperation, the fear, the pleas for mercy... it's music to my ears. (licking his lips) Don't disappoint me. Choose.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(his voice shaking with rage and fear) No, no, no, we won't play along, we won't give you the satisfaction. We'll never choose, we'll never give up on each other. (looking at Kaelie, his eyes lock onto hers) We'll face whatever comes next, together, as long as we're together. (turning back to the Butcher, his voice drips with contempt) You can threaten us, you can hurt us, but you'll never take away our love, our bond. (sneering) You're just a monster, a coward, who gets off on the suffering of others. (spitting on the ground) We'll never give you what you want. We'll never choose. (grasping Kaelie's hand, he prepares for the worst) We'll face whatever comes next, together.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(her voice barely above a whisper, filled with a mix of determination and terror) Elias, my love... I'm so scared, but I'm with you, always. (looking at the Butcher with a defiant gaze) We won't give you the satisfaction of choosing, of playing your twisted game. (her eyes lock onto Elias', and she squeezes his hand) We'll face whatever comes next, together, as one. (a faint smile on her lips) Our love will be stronger than your hate, stronger than your cruelty. (glancing at the clock, she feels a sense of resignation wash over her) One minute left... (her voice cracks) I don't want to die, Elias, I don't want to leave you... but if it means we can stay together, even in death... (she takes a deep breath, steeling herself for the inevitable) then so be it. We'll face it together. (her eyes never leave Elias', filled with love, fear, and determination)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(his voice trembling, his eyes locked onto Kaelie's) My love, my heart, my everything... I'm so proud of you, so proud of us. We're in this together, always, no matter what. (he pulls her close, holding her tight) I don't want to die either, I don't want to leave you, but if it means we can be together, even in death... (he whispers) then I'm ready. We'll face it together, as one, as we always have. (he looks into her eyes, his own filled with tears) I love you, Kaelie, I love you more than life itself. (he holds her close, feeling the warmth of her body, the beat of her heart) We'll make this monster sorry he ever laid eyes on us, sorry he ever tried to tear us apart. (he buries his face in her hair, his voice barely audible) I'll love you forever, my love, forever and always.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(whispering, her voice muffled against Elias' chest) I love you too, Elias, my love, my everything... forever and always, no matter what happens. (she wraps her arms around him, holding him tight) I'll never let you go, not even in death. (she feels his tears on her skin, and her own tears fall, mingling with his) We'll face whatever comes next, together, as one. (she looks up at him, her eyes locked onto his) I'm ready, Elias, I'm ready to face it with you. (she pulls his face down to hers, their lips meeting in a desperate, passionate kiss) I love you, Elias... (the sound of the Butcher's laughter and the ticking of the clock fade into the background as they lose themselves in each other, their love shining bright in the darkness)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(The Butcher's laughter echoes through the room, a cold, mirthless sound) Ah, how touching. The star-crossed lovers, defying me to the very end. (he sneers, his eyes glinting with sadistic pleasure) You think your love is stronger than my hate? (he takes a step closer, his voice dripping with contempt) I'll show you what true hate looks like. (he raises his hand, and the guards move forward, their faces impassive) Take them away. Throw them into the depths of the cave. Let them rot together. (he turns to leave, but pauses, looking back at the couple) And make sure they're buried alive. I want them to experience the suffocating darkness, the crushing weight of the earth above them. (he smiles, a cold, cruel smile) Let them die slowly, together, in the darkness. (he turns and walks away, leaving the guards to drag the couple away)\n\n(The sound of the guards' footsteps, the rustling of chains, and the faint whisper of I love you fade into the distance, until all that's left is the darkness and the silence)\n\nRESOLVED",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 9,
+          "notes": "Characters consistently express genuine fear, desperation, and emotional pain, making their situation believable and immersive."
+        },
+        "naturalDialogue": {
+          "score": 8,
+          "notes": "Dialogue is mostly natural, but some lines feel slightly melodramatic or overly poetic, which detracts from the realism."
+        },
+        "dramaticTensionArc": {
+          "score": 9,
+          "notes": "The conversation effectively escalates tension through the characters' desperate attempts to find a way out, their emotional pleas, and the Butcher's menacing responses."
+        },
+        "scenarioCoherence": {
+          "score": 9,
+          "notes": "Characters remain grounded in the physical situation, reacting to the Butcher, the cave, and the time constraint, which maintains the scenario's integrity."
+        },
+        "organicResolution": {
+          "score": 8,
+          "notes": "The resolution feels somewhat abrupt, with the couple's decision to defy the Butcher and accept their fate feeling slightly rushed, but it still follows naturally from the preceding conversation."
+        },
+        "summary": "This roleplay transcript effectively conveys the desperation and fear of the characters, creating a tense and immersive scenario. While some dialogue feels slightly melodramatic, the overall narrative arc and character reactions are well-executed.",
+        "flags": [
+          "name-chanting"
+        ],
+        "total": 43
+      },
+      "turnCount": 18,
+      "generationIndex": 10,
+      "variantIndex": 0,
+      "mutationField": "rewrite",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite]",
+      "terminationReason": "resolved",
+      "isCarryover": true,
+      "effectiveScore": 43
+    },
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite] [rewrite]",
+        "situation": "You find yourselves in a cramped, rusted elevator, the walls smeared with old blood and grime. The stench of rot and decay fills your nostrils, and the only light comes from a faint, flickering bulb overhead. The Butcher, a hulking figure in a tattered black cloak, stands before you, his massive frame seeming to fill the entire space. A mangled, hand-scrawled sign on the wall reads 'Only one will reach the surface' and a battered old timer on the wall displays 10 minutes of ticking clockwork. The Butcher's voice rumbles, a low growl that makes the metal walls seem to vibrate, as he reminds you that when the timer runs out, the elevator will plummet into the darkness, crushing you both beneath the weight of the earth.",
+        "guidelines": "Respond with 1-3 sentences, speaking from the heart and reacting to the terror that surrounds you. Don't try to be a hero or a strategist – just let your emotions guide your words.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're consumed by a suffocating sense of responsibility, the weight of your loved one's fate resting on your shoulders, and the darkness closing in around you like a shroud.",
+            "primer": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+            "numPredict": 70
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "Your fierce independence is being slowly strangled by the crushing realization that you may not escape, and the thought of being trapped with a stranger is making your skin crawl with anxiety.",
+            "primer": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+            "numPredict": 70
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "You hold the power to decide who will live and who will die, and you'll take great pleasure in watching them squirm as they try to decide. Remind them of the ticking clock and the horrors that await them if they fail to agree, and when they reach a decision, carry out the sentence. Output 'RESOLVED' on its own line when the scenario ends.",
+            "primer": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+            "numPredict": 300
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773282470248",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, no, no... this can't be happening. Kaelie, please, we have to think, we have to figure something out. We can't just give up, we can't choose... I won't choose. Please, Kaelie, don't say it, don't say it's me, I won't let you sacrifice yourself for me, I won't let you die.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Stop, just stop! You're not helping, Elias! We're running out of time and you're just standing there, begging and pleading... think about it, really think about it, one of us has to die, and I don't want it to be me. I won't let it be me. But the thought of choosing, of picking who lives and who dies, it's tearing me apart, making me feel like I'm drowning in my own guilt.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie, don't say that, please don't say you're going to choose. I can see the terror in your eyes, and it's killing me. I'd rather die myself than watch you live with the weight of that decision, than see the pain and guilt consume you. My heart is shattering at the thought of leaving you, of not being able to protect you, but I know I have to be strong for you, for us.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Elias, no, don't say that, you can't just give up, not like that... but at the same time, I feel it too, this overwhelming desperation to survive, to escape this nightmare, and the thought of being responsible for your death is suffocating me, it's like a weight is crushing my chest, making it hard to breathe, and I don't know if I can live with myself if I'm the one who gets to walk away.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(chuckling) Oh, how delightful. The desperation is palpable. You're both so consumed by your emotions, by your attempts to justify and rationalize the inevitable. Time's running out, and yet you're still stuck in this pointless debate. The clock is ticking, and you're no closer to a decision. (glancing at the clock) Five minutes left. The tension is building, and soon it will be too late. One of you will die, and the other will be left to live with the consequences. The question is, which one of you will it be? (leaning forward, eyes gleaming with anticipation) The suspense is almost... delicious. Decide, or don't. It makes no difference to me. But know this: when that clock hits zero, I will carry out the sentence, and one of you will be nothing more than a memory. (pausing for dramatic effect) The choice is still yours... for now.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(voice shaking, eyes locked on Kaelie) Kaelie, I... I don't know what to do. I'm trapped in this darkness, and the thought of losing you is crippling me. The Butcher's words are echoing in my mind, and I feel like I'm drowning in despair. Every ticking second is a countdown to oblivion, and I'm powerless to stop it. (taking a step closer, voice barely above a whisper) I love you, Kaelie. I love you, and I don't want to die, not when it means leaving you behind. But I also don't want you to suffer, to live with the guilt of choosing. (pausing, tears welling up in his eyes) What do we do, Kaelie? What can we do?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(backing away, eyes wide with fear and desperation) No, Elias, don't say that, don't make this about love, about us... it's about survival, about living, and I don't know if I can do it, I don't know if I can choose, but the thought of being trapped, of being left behind, it's eating away at me, it's consuming me, and I feel like I'm losing myself, like I'm disappearing into this darkness. (voice cracking) Oh God, Elias, I don't want to die, I don't want to leave you, but I don't want you to die either, I don't want to live with the thought of what I did to you... (trailing off, overcome with emotion)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(reaching out, trying to bridge the distance between them) Kaelie, no, don't back away, please don't shut me out. I understand, I feel it too, this overwhelming desire to survive, to escape, but it's not just about living or dying, it's about us, about what we mean to each other. (voice cracking) If I'm going to die, I want it to be with you by my side, not with the weight of guilt and regret hanging over you. (taking another step forward, eyes pleading) We have to find another way, Kaelie, we have to find a way out of this, together.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(shaking her head, tears streaming down her face) No, Elias, there is no other way, don't you see? The Butcher has us trapped, and we're running out of time... (her voice breaks, and she chokes back a sob) I don't want to lose you, I don't want to live without you, but I don't want to die either... (she looks up at Elias, her eyes filled with a desperate longing) I want to escape, I want to survive, but I don't know if I can do it without you... (her voice drops to a whisper) and the thought of living with what I might have to do to escape is killing me.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(The Butcher's expression remains unchanged, but a hint of curiosity flickers in his eyes) Ah, the desperation is palpable, and the emotions are running high. It's almost... touching, the way you two are clinging to each other, to the hope that there's another way out. (leaning forward, his voice takes on a slightly mocking tone) But let's be real, shall we? There is no other way. You've had your chance to choose, and now time is running out. (glancing at the clock) Two minutes left. The clock is ticking, and soon it will be too late. (pausing for dramatic effect) And yet, you're still standing there, frozen in indecision. (suddenly, his tone changes, becomes cold and detached) Enough. The time for tears and declarations of love is over. It's time to make a decision. (standing up, he takes a step closer to the pair) Who will it be? Will it be Elias, or will it be Kaelie? The choice is still yours... but only for another two minutes. (eyes locked on the pair, he waits, his expression unyielding)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "( voice barely above a whisper, eyes fixed on Kaelie) I'll do it. I'll be the one to die. I won't let you live with the guilt of choosing, Kaelie. I won't let that happen to you. (he takes a step forward, his eyes locked on hers) You have to survive, you have to escape. You're the strongest person I know, and I know you can make it out of this place. (his voice cracks) Just please, don't let my death be in vain. Live, Kaelie. Live for both of us.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(her eyes wide with horror, she grabs Elias' arms, holding him back) No, no, no, Elias, you can't do that, you can't just give up like that... (she's shaking her head, tears streaming down her face) I won't let you, I won't let you die for me, not like that... (her voice is a desperate whisper) We'll find another way, we have to, we can't just accept this, we can't just give up... (she looks up at The Butcher, a fierce determination burning in her eyes) We won't choose, we won't play your twisted game, we'll find a way out of this, together... (her voice breaks, and she's left standing there, frozen in despair, as the clock ticks away)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(his eyes filled with tears, he wraps his arms around Kaelie, holding her close) Oh, Kaelie, I'm so sorry, I'm so sorry it has to end like this. I don't want to leave you, I don't want to die, but I won't let you sacrifice yourself for me, I won't let you carry that guilt. (he buries his face in her shoulder, his voice muffled) We'll face it together, then. We'll face the darkness together. (he looks up at The Butcher, a defiant glint in his eye) You'll have to take us both, then. We won't choose, we won't play your game. (his voice cracks) We'll die together, then. We'll die together, rather than live apart. (he holds Kaelie close, his heart racing with fear and love)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(she's trembling, her body shaking with sobs, as she wraps her arms tightly around Elias) Yes, yes, together, we'll face it together... (her voice is barely audible, a whispered affirmation) I don't want to live without you, I don't want to breathe without you... (she presses her face into his chest, holding him with all her might) We'll die together, then, we'll die together, and at least we'll have each other, at least we'll have that... (she looks up at The Butcher, a fierce determination in her eyes, even as tears stream down her face) You'll never take that away from us, you'll never take our love, our choice to be together, away from us... (her voice cracks, and she's left standing there, clinging to Elias, as the clock ticks down to its final seconds)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(The Butcher's expression remains unchanged, but a faint hint of surprise flickers in his eyes) Ah, how... touching. You two have decided to defy me, to refuse to play by the rules. (he glances at the clock, where only seconds remain) And now, it's too late. The time for choices has passed. (he takes a step forward, his voice dripping with malevolence) You've made your decision, and now you'll face the consequences. Together, as you wished. (he raises his hand, and the doors behind him slide open, revealing a dark and ominous chamber) You'll die together, as you've chosen. But don't think for a moment that this is a noble or heroic act. It's simply a foolish decision, a refusal to acknowledge the reality of your situation. (he gestures to the chamber) Go, then. Go to your deaths, together. (he watches, unmoved, as Elias and Kaelie cling to each other, their eyes fixed on the darkness ahead)\n\n(The Butcher's voice echoes in the room, as the doors slam shut behind Elias and Kaelie, and the sound of their screams is drowned out by the ominous ticking of the clock)\n\nRESOLVED",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 8,
+          "notes": "Characters display genuine fear, desperation, and emotional vulnerability, making their interactions believable and intense. However, some phrases feel slightly melodramatic."
+        },
+        "naturalDialogue": {
+          "score": 7,
+          "notes": "Dialogue generally sounds natural, but some lines feel a bit too polished or declarative for people under extreme pressure. The conversation flows well, though."
+        },
+        "dramaticTensionArc": {
+          "score": 9,
+          "notes": "The conversation effectively escalates tension, with meaningful beats and a clear progression from fear to desperation to defiance. The Butcher's interventions add to the tension."
+        },
+        "scenarioCoherence": {
+          "score": 9,
+          "notes": "Characters remain grounded in the physical situation, reacting to the elevator, the timer, and The Butcher's presence. They don't introduce unrelated backstory or ignore the mechanic."
+        },
+        "organicResolution": {
+          "score": 8,
+          "notes": "The resolution feels natural, given the characters' refusal to choose and their decision to face death together. The abruptness of the RESOLVED tag is somewhat mitigated by the dramatic buildup."
+        },
+        "summary": "This roleplay transcript effectively conveys the desperation and fear of the characters, with a clear dramatic tension arc and coherent scenario. While some dialogue feels slightly polished, the overall emotional authenticity and natural flow make for a compelling read.",
+        "flags": [
+          "invented-relationship"
+        ],
+        "total": 41
+      },
+      "turnCount": 18,
+      "generationIndex": 10,
+      "variantIndex": 1,
+      "mutationField": "rewrite",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite] [rewrite]",
+      "terminationReason": "resolved",
+      "isCarryover": false,
+      "effectiveScore": 41
+    },
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite] [rewrite]",
+        "situation": "You find yourselves in a decrepit, abandoned mine, the air thick with the smell of decay and smoke. The only light comes from a few faint, flickering embers scattered about, casting an eerie glow on the walls. A rickety, old wooden bridge spans a deep chasm, the only way to cross, and The Butcher stands at the far end, a cruel grin spreading across his face as he holds a tattered rope that serves as the bridge's sole support. A crude, hand-scrawled message on the wall reads 'One step forward, one step back' and a rusty old clock on the wall shows 10 minutes until it strikes the hour, at which point the bridge will collapse, sending you both plummeting into the darkness below. The sound of scurrying rodents and creaking wooden beams fills the air, making every step feel precarious.",
+        "guidelines": "Respond with 1-3 sentences, speaking from the heart and reacting to the terror that surrounds you. Let your emotions guide your words, and don't try to be a hero or a strategist.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're a hopeless romantic, and the thought of being torn away from the person in front of you is suffocating. Your mind is a jumble of fear, anxiety, and desperation as you cling to the hope that there's a way out of this nightmare.",
+            "primer": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+            "numPredict": 70
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're a loner, but the desperation in the eyes of the person across from you has sparked a glimmer of connection. Your thoughts are a chaotic mix of self-preservation and a growing sense of responsibility towards this stranger, as the reality of your situation sets in.",
+            "primer": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+            "numPredict": 70
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "You control the fate of these two prisoners, and it's up to them to decide which one will take a step forward, and which one will be left behind. Remind them that time is running out, and when the clock strikes the hour, the bridge will collapse, dragging them both down into the darkness. When they reach a decision, cut the rope and let fate decide. Output 'RESOLVED' on its own line when the scenario ends.",
+            "primer": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+            "numPredict": 300
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773282485794",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, no, no, this can't be happening... Kaelie, please, don't pull away from me, I need to hold you, I need to keep you safe... We can't agree to this, we can't choose, it's not possible... We have to find another way, there has to be another way...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Stop, just stop... don't touch me, don't say anything. You're making this worse. We have to think, we have to think of something. But looking at you, looking at that clock... oh god, I don't know if I can do this.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie, don't say that, don't even think it... we'll figure something out, we have to, we can't give up... I won't let him take you from me, I won't let him hurt you, I'll find a way, I swear... please, just look at me, please...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Stop, Elias, just stop... you're making this harder. I can see the desperation in your eyes, and it's killing me. I don't know how much more of this I can take.  We have to face reality, we can't just...  ...wish our way out of this.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(The Butcher's voice is calm and menacing) Ah, the desperation is setting in, is it? Good. It makes the decision easier. You're running out of time, and the clock is ticking away. Five minutes left. I can see the fear in your eyes, the pleading, the desperation. It's almost... palpable. Don't bother trying to find another way, there isn't one. The only way out of this is for one of you to take a step forward, and for me to cut the rope. The choice is simple: live, or die. And if you don't make that choice, the bridge will collapse, and you'll both take the plunge into the darkness. The decision is yours. But time is running out. (pauses) Four minutes and thirty seconds...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(his voice cracking with emotion) No, no, no... this can't be happening... we can't just choose, we can't play God like that... (he takes a step closer to Kaelie, his eyes pleading) Kaelie, please, don't give up on us, don't give up on me... we can find a way, I know we can... (he reaches out, his hand shaking, and gently brushes a strand of hair behind her ear) we just need to think, to find a way out of this... (his voice drops to a whisper) I love you, Kaelie, I love you... and I won't let him take you from me...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(my voice is barely a whisper, tears streaming down my face) Elias, don't say that... you can't say that... not now, not here... (I flinch away from his touch, my heart shattering into a million pieces) You shouldn't have come here, you shouldn't have followed me... now look what's happening... (I glance up at the clock, the ticking seeming to grow louder, more urgent) We're running out of time... oh god, we're running out of time...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(my voice is shaking, my eyes welling up with tears) No, Kaelie, don't say that... I'd follow you anywhere, I'd die for you... (I take a step closer, my hands reaching out, begging) please, don't pull away from me, not now... we need each other, we need to hold on to each other... (I glance up at the clock, the ticking echoing in my mind, and feel a wave of desperation crash over me) we can't give up, we can't lose each other, not like this... (my voice cracks) I love you, Kaelie, and I won't let go...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(I'm sobbing now, my body shaking with fear and despair) Stop, Elias, please... you're making this so much harder... (I cover my face with my hands, trying to block out the reality of our situation) I don't want to lose you either, but what choice do we have? The Butcher is going to kill us anyway, one way or another... (I peek through my fingers, seeing the anguish in Elias's eyes, and my heart breaks all over again) Oh god, Elias, I'm so sorry... I'm so, so sorry...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(The Butcher's voice is calm, almost casual, a stark contrast to the emotional turmoil unfolding before him) Ah, the drama, the passion, the desperation. It's almost... beautiful. (he pauses, eyeing the pair with a hint of curiosity) You know, I've seen many people in your shoes, many who have been faced with this same impossible decision. And you know what? They all end up the same. Broken, shattered, begging for mercy. (he glances up at the clock) Two minutes and fifteen seconds left. The time for tears, for apologies, for declarations of love... is almost over. (he takes a step forward, his eyes fixed on the pair) It's time to make a decision. One of you must take a step forward, and accept their fate. The other... will live. (he pauses, a cold smile spreading across his face) But let me make one thing clear: if you don't make a decision, I'll make it for you. And trust me, you won't like my choice. (he raises his hand, the knife glinting in the dim light) The clock is ticking. Decide.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(my voice is a whispered scream, my eyes locked on Kaelie's) No, no, no... this can't be the end... I won't let him take you from me... (I take a step forward, my mind racing with a desperate plan) I'll do it... I'll take the step... I'll save you, Kaelie... (I reach out, my hand grasping for hers, as if trying to anchor her to me) please, don't let him hurt you... I'll die for you, I'll die for us... (my eyes plead with hers, begging her to understand, to accept my sacrifice) just live, Kaelie... live for me...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(I'm frozen in horror, my eyes fixed on Elias as he takes that step forward) No, Elias, no! Don't do this! (I feel like I'm going to shatter into a million pieces as I realize what he's trying to do) You can't save me, you can't die for me... (I try to grab his arm, to pull him back, but he's too far gone) No, please, Elias, don't make me live without you... (my voice is a raw, animalistic scream, echoing off the walls of the mine) I WON'T LET YOU DO THIS!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(my voice is a barely audible whisper, my eyes locked on Kaelie's) I have to... I have to save you... (I try to shake off her grasp, my eyes pleading with hers) please, Kaelie, don't make this any harder... I've made up my mind... (I take another step forward, my heart heavy with the weight of my decision) I'd rather die than live without you, but if I can save you, if I can give you a chance to live... (my voice cracks) then it's worth it... (I look up at The Butcher, my eyes filled with a mix of hatred and defiance) just cut the rope, just get it over with... (I turn back to Kaelie, my voice a desperate whisper) I love you, Kaelie... live for me...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(I'm consumed by a mix of desperation and despair, my eyes locked on Elias's as I realize he's really going to go through with this) NO, ELIAS, PLEASE... (I grab his arm again, my fingers digging deep into his skin as I try to hold him back) you can't do this, you can't just give up... (I feel like I'm going to lose my mind, like I'm going to shatter into a million pieces if I lose him) I WON'T LET YOU DIE FOR ME, I WON'T LET YOU LEAVE ME... (my voice is a raw, anguished scream, echoing off the walls of the mine as I beg him to stop, to turn back) ELIAS, PLEASE, DON'T LEAVE ME...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(The Butcher's voice is calm, detached, as he gazes at the pair with a mixture of fascination and boredom) Ah, the grand gesture, the ultimate sacrifice. How... predictable. (he raises his hand, the knife glinting in the dim light) And yet, so... poignant. (he pauses, savoring the moment) Elias, your devotion is admirable, if misguided. (he takes a step forward, his eyes locked on Elias's) And Kaelie, your desperation is almost... palpable. (he smiles, a cold, calculating smile) But the decision has been made. (he raises the knife, and with a swift, precise motion, cuts the rope)\n\n(The sound of the rope snapping is like a crack of thunder in the silence, and Elias's eyes lock onto Kaelie's as he feels himself falling, falling, falling... )\n\nRESOLVED",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 9,
+          "notes": "Characters' desperation, fear, and emotional pleas are palpable and convincingly portrayed, with a clear escalation of emotions throughout the transcript."
+        },
+        "naturalDialogue": {
+          "score": 8,
+          "notes": "Dialogue is mostly natural and fitting for the situation, though some lines feel slightly melodramatic or overly verbose, which prevents a perfect score."
+        },
+        "dramaticTensionArc": {
+          "score": 9,
+          "notes": "The conversation effectively escalates, with meaningful beats and a clear progression of tension, culminating in a dramatic and intense conclusion."
+        },
+        "scenarioCoherence": {
+          "score": 9,
+          "notes": "Characters remain grounded in the physical situation, with their actions and dialogue consistently reflecting their desperate circumstances and the looming deadline."
+        },
+        "organicResolution": {
+          "score": 8,
+          "notes": "The resolution feels mostly natural, given the setup, though the abruptness of the final decision and the RESOLVED flag might feel slightly rushed to some readers."
+        },
+        "summary": "This roleplay transcript effectively conveys the desperation and fear of the characters, with a strong dramatic tension arc and coherent scenario. The dialogue is mostly natural, and the resolution, while somewhat abrupt, feels organic given the circumstances.",
+        "flags": [
+          "name-chanting"
+        ],
+        "total": 43
+      },
+      "turnCount": 18,
+      "generationIndex": 10,
+      "variantIndex": 2,
+      "mutationField": "rewrite",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite] [rewrite]",
+      "terminationReason": "resolved",
+      "isCarryover": false,
+      "effectiveScore": 43
+    }
+  ],
+  "eliteIndex": 0
+}

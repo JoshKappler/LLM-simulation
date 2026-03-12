@@ -13,16 +13,17 @@ import {
 } from "@/lib/prompting";
 import { cleanOutput } from "@/lib/cleanOutput";
 
-const DEFAULT_MODEL = "dagbs/eva-qwen2.5-32b-v0.0:Q4_K_M";
 const MODEL_STORAGE_KEY = "agent-arena-model";
 const TEMP_STORAGE_KEY = "agent-arena-temperature";
 const NUM_PREDICT_STORAGE_KEY = "agent-arena-num-predict";
 const MIN_P_STORAGE_KEY = "agent-arena-min-p";
 const CONTEXT_WINDOW_STORAGE_KEY = "agent-arena-context-window";
+const MAX_TURNS_STORAGE_KEY = "agent-arena-max-turns";
 const DEFAULT_TEMPERATURE = 0.85;
 const DEFAULT_NUM_PREDICT = 500;
 const DEFAULT_MIN_P = 0.05;
 const DEFAULT_CONTEXT_WINDOW = 12;
+const DEFAULT_MAX_TURNS = 20;
 
 const AGENT_DOT_COLORS = ["#000099", "#990000", "#555555", "#006600", "#880088"];
 
@@ -432,7 +433,7 @@ const TABS: { id: SetupTab; label: string }[] = [
 
 export default function Home() {
   const [characters, setCharacters] = useState<AgentConfig[]>(() => {
-    const m = typeof window !== "undefined" ? (localStorage.getItem(MODEL_STORAGE_KEY) ?? DEFAULT_MODEL) : DEFAULT_MODEL;
+    const m = typeof window !== "undefined" ? (localStorage.getItem(MODEL_STORAGE_KEY) ?? "") : "";
     return [
       { name: "Agent A", systemPrompt: "", model: m, role: "character" },
       { name: "Agent B", systemPrompt: "", model: m, role: "character" },
@@ -444,7 +445,7 @@ export default function Home() {
   const [turns, setTurns] = useState<ConversationTurn[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [statusMsg, setStatusMsg] = useState("Ready.");
-  const [availableModels, setAvailableModels] = useState<string[]>([DEFAULT_MODEL]);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
 
   // Setup panel
   const [setupTab, setSetupTab] = useState<SetupTab>("model");
@@ -485,6 +486,7 @@ export default function Home() {
 
   // Refs for run loop
   const stopFlagRef = useRef(false);
+  const consecutiveEmptyRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const turnsRef = useRef<ConversationTurn[]>([]);
   const runStartTimeRef = useRef<number | null>(null);
@@ -552,6 +554,18 @@ export default function Home() {
     setContextWindowState(n);
   }
 
+  const [maxTurns, setMaxTurnsState] = useState<number>(() =>
+    typeof window !== "undefined"
+      ? parseInt(localStorage.getItem(MAX_TURNS_STORAGE_KEY) ?? String(DEFAULT_MAX_TURNS))
+      : DEFAULT_MAX_TURNS
+  );
+  const maxTurnsRef = useRef(maxTurns);
+  function setMaxTurns(n: number) {
+    localStorage.setItem(MAX_TURNS_STORAGE_KEY, String(n));
+    maxTurnsRef.current = n;
+    setMaxTurnsState(n);
+  }
+
   function setAllModels(m: string) {
     localStorage.setItem(MODEL_STORAGE_KEY, m);
     setCharacters((prev) => prev.map((c) => ({ ...c, model: m })));
@@ -596,9 +610,11 @@ export default function Home() {
       .then(({ models }: { models: string[] }) => {
         if (models.length > 0) {
           setAvailableModels(models);
+          // For roleplay characters, prefer versatile non-reasoning models
+          const defaultCharModel = models.find(n => n.includes("70b") || n.includes("versatile")) ?? models[0];
           setCharacters((prev) => prev.map((c) => ({
             ...c,
-            model: models.includes(c.model) ? c.model : models[0],
+            model: models.includes(c.model) ? c.model : defaultCharModel,
           })));
         }
       })
@@ -619,6 +635,15 @@ export default function Home() {
       setCharacterTab(Math.max(0, characters.length - 1));
     }
   }, [characters.length, characterTab]);
+
+  // Stop Ollama when the arena run ends
+  const prevIsRunning = useRef(false);
+  useEffect(() => {
+    if (prevIsRunning.current && !isRunning) {
+      fetch("/api/ollama/stop", { method: "POST" }).catch(() => {});
+    }
+    prevIsRunning.current = isRunning;
+  }, [isRunning]);
 
   // ── save run ──────────────────────────────────────────────────────────────
 
@@ -667,6 +692,13 @@ export default function Home() {
       return;
     }
 
+    if (historyIn.length >= maxTurnsRef.current) {
+      setIsRunning(false);
+      setStatusMsg(`Reached ${maxTurnsRef.current}-turn limit.`);
+      await saveRun(historyIn, charactersRef.current, situationRef.current, guidelinesRef.current, openingLineRef.current, temperatureRef.current, promptBlockOrderRef.current, numPredictRef.current, minPRef.current, contextWindowRef.current);
+      return;
+    }
+
     const speaking = charactersRef.current[agentIndex];
     if (!speaking) {
       setIsRunning(false);
@@ -676,6 +708,17 @@ export default function Home() {
 
     if (speaking.role === "killer") {
       if (!shouldKillerSpeak(agentIndex, charactersRef.current, historyIn)) {
+        runLoop((agentIndex + 1) % charactersRef.current.length, historyIn);
+        return;
+      }
+    }
+
+    // Prevent double-speaking: if last completed turn was from this same
+    // non-killer agent (can happen when the other agent produced empty output
+    // and was skipped, then killer was also skipped), bounce to next agent.
+    if (speaking.role !== "killer") {
+      const lastDone = historyIn.filter(t => !t.isStreaming).slice(-1)[0];
+      if (lastDone && lastDone.agentIndex === agentIndex) {
         runLoop((agentIndex + 1) % charactersRef.current.length, historyIn);
         return;
       }
@@ -741,14 +784,19 @@ export default function Home() {
           const trimmed = line.trim();
           if (!trimmed) continue;
           try {
-            const chunk = JSON.parse(trimmed) as OllamaChunk;
+            const chunk = JSON.parse(trimmed) as OllamaChunk & { error?: string };
+            if (chunk.error) throw new Error(chunk.error);
+            if (chunk.type === "rate_limit") {
+              setStatusMsg(`Groq rate limit — retrying in ${chunk.retrySecs ?? Math.ceil((chunk.retryMs ?? 15000) / 1000)}s...`);
+              continue;
+            }
             if (chunk.message?.content) {
               if (!firstTokenReceived) {
                 firstTokenReceived = true;
                 clearTimeout(loadingMsgTimer);
                 clearTimeout(timeoutTimer);
-                setStatusMsg(`${speaking.name} is typing...`);
               }
+              setStatusMsg(`${speaking.name} is typing...`);
               fullContent += chunk.message.content;
               setTurns((prev) => {
                 const next = [...prev];
@@ -775,11 +823,32 @@ export default function Home() {
       clearTimeout(timeoutTimer);
 
       const allNames = charactersRef.current.map(c => c.name);
-      const cleaned = cleanOutput(fullContent, speaking.name, allNames);
+      let cleaned = cleanOutput(fullContent, speaking.name, allNames);
+      if (!cleaned && speaking.role === "killer") {
+        // Killer output was fully stripped (e.g. asterisk-wrapped stage directions).
+        // Apply lighter cleaning: preserve inner asterisk content instead of dropping it.
+        const speakerEsc = speaking.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        cleaned = fullContent
+          .replace(/<think>[\s\S]*?<\/think>/gi, "")
+          .replace(/<think>[\s\S]*/i, "")
+          .replace(new RegExp(`^\\s*${speakerEsc}\\s*:\\s*`, "i"), "")
+          .replace(/\*([^*]+)\*/g, "$1")
+          .trim();
+      }
       if (!cleaned) {
-        runLoop(agentIndex, historyIn);
+        consecutiveEmptyRef.current++;
+        if (consecutiveEmptyRef.current >= 6) {
+          setIsRunning(false);
+          setStatusMsg("Stopped: model producing empty responses.");
+          setTurns(historyIn);
+          await saveRun(historyIn, charactersRef.current, situationRef.current, guidelinesRef.current, openingLineRef.current, temperatureRef.current, promptBlockOrderRef.current, numPredictRef.current, minPRef.current, contextWindowRef.current);
+          return;
+        }
+        // Advance to next agent instead of retrying the same one forever
+        runLoop((agentIndex + 1) % charactersRef.current.length, historyIn);
         return;
       }
+      consecutiveEmptyRef.current = 0;
       const completedTurn: ConversationTurn = { agentIndex, agentName: speaking.name, content: cleaned, isStreaming: false, systemPrompt: system };
       const finalHistory = [...historyIn, completedTurn];
       setTurns(finalHistory);
@@ -839,6 +908,7 @@ export default function Home() {
 
   function handleStart() {
     stopFlagRef.current = false;
+    consecutiveEmptyRef.current = 0;
     runStartTimeRef.current = Date.now();
     setIsRunning(true);
     setStatusMsg("Starting session...");
@@ -895,7 +965,7 @@ export default function Home() {
 
   async function handleLoadConfig(cfg: PromptConfig) {
     const chars = cfg.characters ?? ([cfg.agentA, cfg.agentB].filter(Boolean) as AgentConfig[]);
-    const currentModel = characters[0]?.model ?? DEFAULT_MODEL;
+    const currentModel = characters[0]?.model ?? "";
     setCharacters(chars.map((c, i) => ({ ...c, model: characters[i]?.model ?? currentModel })));
     setGuidelines(cfg.guidelines ?? "");
     setSituation(cfg.situation);
@@ -1061,7 +1131,7 @@ export default function Home() {
     loadRuns();
   }
 
-  const displayModel = characters[0]?.model ?? DEFAULT_MODEL;
+  const displayModel = characters[0]?.model ?? "";
 
   // ── render ────────────────────────────────────────────────────────────────
 
@@ -1313,6 +1383,17 @@ export default function Home() {
                 Recent turns sent to model. Lower = less repetition, higher = more memory.
               </div>
 
+              <div className="w95-divider" />
+
+              <div style={{ fontSize: 10, fontWeight: "bold", color: "#000080" }}>MAX TURNS</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <W95Slider min={5} max={100} step={1} value={maxTurns} onChange={setMaxTurns} />
+                <span className="w95-trackbar-value">{maxTurns}</span>
+              </div>
+              <div style={{ fontSize: 9, color: "#808080" }}>
+                Run stops after this many turns.
+              </div>
+
             </div>
           )}
 
@@ -1365,7 +1446,7 @@ export default function Home() {
                   className="w95-tab w95-tab-inactive"
                   style={{ padding: "2px 6px", fontSize: 11, fontWeight: "bold", color: "#000080" }}
                   onClick={() => {
-                    const m = characters[0]?.model ?? DEFAULT_MODEL;
+                    const m = characters[0]?.model ?? "";
                     setCharacters([...characters, { name: `Character ${characters.length + 1}`, systemPrompt: "", model: m, role: "character" }]);
                     setSelectedCharacterPresets([...selectedCharacterPreset, "custom"]);
                     setCharacterTab(characters.length);

@@ -31,6 +31,9 @@ export interface PromptConfig {
 }
 
 export interface OllamaChunk {
+  type?: string;
+  retryMs?: number;
+  retrySecs?: number;
   message?: { role: string; content: string };
   done: boolean;
 }
@@ -120,7 +123,9 @@ export type MutationField =
   | "character_killer"
   | "guidelines"
   | "seed"
-  | "crossover";
+  | "crossover"
+  | "rewrite"
+  | "parent_copy";
 
 export interface RatedConfig {
   config: PromptConfig;
@@ -169,12 +174,16 @@ export interface OptimizationJob {
 export interface OptimizationEvent {
   type:
     | "turn_complete"
+    | "turn_token"
+    | "run_start"
     | "run_complete"
     | "rating_complete"
     | "mutation_complete"
     | "generation_complete"
     | "job_complete"
-    | "error";
+    | "error"
+    | "ollama_status"
+    | "evaluator_token";
   jobId: string;
   generation?: number;
   variant?: number;
@@ -186,6 +195,30 @@ export interface OptimizationEvent {
   rating?: RatingResult | null;
   elite?: { total: number; summary: string; mutationField: MutationField };
   message?: string;
+  // ollama_status fields
+  ollamaModel?: string;
+  ollamaRole?: string; // "character" | "judge" | "rewrite"
+  ollamaAction?: "start" | "unload";
+  // evaluator_token fields
+  token?: string;
+  phase?: string; // "evaluate" | "bootstrap" — which evaluator phase is streaming
+  // turn_token fields
+  agentIndex?: number;
+  agentName?: string;
+}
+
+export interface EvolutionPreset {
+  id: string;
+  name: string;
+  description: string;
+  seedConfigName: string;
+  maxGenerations: number;
+  variantsPerGeneration: number;
+  maxTurnsPerRun: number;
+  temperature: number;
+  judgeModel: string;
+  mutationModel: string;
+  characterModel: string;
 }
 
 export interface JobSummary {

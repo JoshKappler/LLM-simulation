@@ -9,7 +9,7 @@ import type { AgentConfig, ConversationTurn } from "../types";
 // ── Killer thresholds ─────────────────────────────────────────────────────────
 
 /** Minimum number of non-killer turns before the killer first evaluates. */
-export const KILLER_FIRST_THRESHOLD = 6;
+export const KILLER_FIRST_THRESHOLD = 18;
 
 /** Minimum number of turns between subsequent killer evaluations. */
 export const KILLER_INTERVAL = 3;
@@ -24,7 +24,12 @@ export function shouldKillerSpeak(
   killerIndex: number,
   characters: AgentConfig[],
   history: ConversationTurn[],
+  firstThreshold?: number,
+  interval?: number,
 ): boolean {
+  const threshold = firstThreshold ?? KILLER_FIRST_THRESHOLD;
+  const gap = interval ?? KILLER_INTERVAL;
+
   const completed = history.filter((t) => !t.isStreaming);
 
   const nonKillerCount = completed.filter(
@@ -45,8 +50,8 @@ export function shouldKillerSpeak(
   void killerIndex; // index is accepted for future multi-killer support
 
   return (
-    nonKillerCount >= KILLER_FIRST_THRESHOLD &&
-    turnsSinceKiller >= KILLER_INTERVAL
+    nonKillerCount >= threshold &&
+    turnsSinceKiller >= gap
   );
 }
 

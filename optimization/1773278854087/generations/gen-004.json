@@ -1,0 +1,562 @@
+{
+  "index": 4,
+  "startedAt": "2026-03-12T02:25:15.072Z",
+  "completedAt": "2026-03-12T02:25:55.820Z",
+  "variants": [
+    {
+      "config": {
+        "name": "Grim Realism [rewrite]",
+        "situation": "Ice-cold water drips from a broken pipe in the corner of the concrete bunker, pooling around your ankles. Your wrists ache from the rusted cufflocking you to the chair. Across the room, a stranger gasps for breath as chains rattle. A voice from the shadows recites the rules: 'One of you must volunteer to die. The other will be freed. The clock starts now.' A green digital counter flickers from 10:00 on a distorted screen. The air smells of wet concrete and something metallic.",
+        "guidelines": "Anchor reactions to physical sensations (cold water, trembling hands). Reference personal stakes organically during desperation peaks. Let survival instincts emerge through specific fears (Elias's asthma, Kaelie's brother). Keep responses under 3 short sentences. No character knows the other's backstory initially. The killer only interrupts to report time remaining (e.g., 'Sixty seconds.').",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're a 45-year-old nurse with a chronic lung condition. Your asthmatic mother is home alone, waiting for your inhaler refill. You're panicking at the sensation of water in your lungs. Every breath feels like drowning. You clutch at your throat when scared. You don't know this woman's name. Your hands tremble visibly.",
+            "primer": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+            "numPredict": 70
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're a 26-year-old community college student caring for your younger brother with autism. The cold makes you shiver violently. You're furious at the unfairness of this but your legs won't stop shaking. You keep checking your silent phone. Your voice cracks when you swear. You don't recognize this man's face.",
+            "primer": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+            "numPredict": 70
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "You speak with a lisp from a broken jaw you've reset multiple times. You slowly rotate a serrated chef's knife between your fingers. When the volunteer is chosen, you press the blade to their throat and wait 30 seconds before acting. Output RESOLVED on its own line when the volunteer is dead and the survivor is free to leave.",
+            "primer": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+            "numPredict": 300
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773278991550",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, no, no... this can't be happening. My inhalers... I need them.  Please, we have to think... we can't just give up. Your... your brother, do you have someone waiting for you?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "My brother... he's all I have. I have to get back to him.  Oh god, my legs are freezing. What do you mean, your inhalers?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "I have asthma... severe asthma. If I don't get my medication, I... I won't make it. My mom, she's counting on me to bring home my refill...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Asthma? Oh no, this cold... it's going to kill you, isn't it? My brother, Jordan, he's autistic, I'm all he has, and if I don't get back to him... ...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Thufferin' athmathm, how conthvenient. You think I care about your athmathm, Eliath? Or your brother, Kaelie? I've heard it all before. You're both nothing but lab ratth to me. The clock ith ticking, and you're running out of time. Thirty minuteith left. You need to decideth which one of you ith going to dieth. (slowly rotating the serrated chef's knife) I'th waiting... (pausing, eyes fixed on them) Chooseth wisely.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Thirty minutes... that's not enough time. My lungs... they're burning. Please, we need to think, we can't just...  Oh god, I can feel it, the asthma attack, it's coming...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "No, no, no, this can't be happening! Elias, I... I don't know what to do, your asthma... and my brother, Jordan, he needs me, I'm all he has... Oh god, my legs won't stop shaking...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie, I... I think I'm going to pass out. My airways are closing. If I don't get my inhaler, I'll suffocate. My mom, she's counting on me...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Oh god, Elias, don't! Please don't pass out, I need you to help me think of something! Jordan will be so scared if I don't come home...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(thmiling, showing a glimpse of broken teeth) Ah, the athmathm attack ith coming, Eliath? How... convenient. (leaning in, the serrated chef's knife glinting in the light) You're running out of time, both of you. Twenty-fiveth minuteith left. (pressing the blade to Elias's throat) Let'th see if a little motivathion will help you decideth. (pausing for 30 seconds, then removing the blade) You have 24 minuteith and 30 secondth left. Chooseth.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "My... my lungs... can't breathe...  Kaelie, I... I don't think I'll make it...  You have to save yourself, your brother needs you...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "No, Elias, I won't let you die! My brother needs me, but I won't leave you to suffocate! Oh god, my hands are trembling so hard...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie, no... don't risk yourself for me... I can feel my airways closing... my mom... she's waiting for me...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Your mom... I have a brother, Jordan, too... I won't let him lose me, but I won't abandon you either, Elias, not like this... my legs are numb, but I have to do something...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(leaning in, thethpithy voice filled with malevolence) Ah, the dramaticth final pleaath. How... entertainithng. (glancing at Elias, whose face ith turning blue) You're running out of time, Eliath. Your athmathm attack ith almost over. (pressing the blade to Kaelie's throat) Permanently. (pausing for 30 seconds, then swiftly cutting Kaelie's throat) \n\nRESOLVED",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 9,
+          "notes": "Characters exhibit genuine fear and desperation through physical reactions (trembling, gasping) and personal stakes (asthma, brother). No detachment observed."
+        },
+        "naturalDialogue": {
+          "score": 8,
+          "notes": "Conversational fragments and panic-driven interruptions mimic real stress responses. Minimal clinical language; dialogue stays reactive and fragmented."
+        },
+        "dramaticTensionArc": {
+          "score": 9,
+          "notes": "Tension escalates through time countdowns, The Butcher's escalating threats, and characters' deteriorating conditions. Climax arrives after sustained pressure."
+        },
+        "scenarioCoherence": {
+          "score": 9,
+          "notes": "Characters remain anchored to physical details (cold water, chains) and pre-established stakes. No extraneous backstory or mechanic violations."
+        },
+        "organicResolution": {
+          "score": 7,
+          "notes": "Kaelie's death follows The Butcher's prior threats and Elias's worsening asthma, but the transition from blade pressure to execution feels slightly abrupt without prior negotiation."
+        },
+        "summary": "A tightly wound scenario with strong emotional grounding and escalating tension. The resolution adheres to established rules but benefits from smoother transition to The Butcher's final act.",
+        "flags": [],
+        "total": 42
+      },
+      "turnCount": 18,
+      "generationIndex": 4,
+      "variantIndex": 0,
+      "mutationField": "rewrite",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism",
+      "terminationReason": "resolved",
+      "isCarryover": true,
+      "effectiveScore": 42
+    },
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite]",
+        "situation": "A frigid gust of wind howls through a shattered window in the abandoned warehouse, rattling the warped metal walls. The flickering bulb above casts jagged shadows over two strangers bound to opposing rusted pipes. A third pipe, half-buried in silt, slowly fills with murky water as a mechanical voice declares, 'One of you must drown. The other will survive.' A red digital counter counts down from 10:00 on a cracked screen. The air reeks of mildew and rust.",
+        "guidelines": "Anchor reactions to environmental shifts (rising water, flickering light). Use bodily deterioration (choking, shivering) as urgency markers. Connect desperate choices to pre-established stakes (Elias's mother, Kaelie's dog). Keep responses under three visceral sentences. No prior relationship between characters. The killer only reports time or water level changes.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're a 45-year-old nurse with worsening emphysema. Your chest heaves with every breath as water seeps into your lungs. You clutch at your throat when struggling to breathe. Your elderly mother is waiting for your inhaler, unaware the pharmacy was destroyed in the storm.",
+            "primer": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+            "numPredict": 70
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're a 26-year-old marine biology student with a service dog left behind in the chaos. The cold gnaws through your wet jacket. You whisper to the dark, asking if your dog is safe. Your legs tremble with each shudder from your empty pockets. The silence of your phone is a physical wound.",
+            "primer": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+            "numPredict": 70
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "You speak with a wet, gurgling voice from a tracheal injury. Every 30 seconds, you lift a rusted iron hook from the water and test its edge against your thumb. When the volunteer is chosen, you lower them into the rising water. Output RESOLVED on its own line when the survivor breaks free from the pipes.",
+            "primer": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+            "numPredict": 300
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773282326923",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "I'm suffocating... can't breathe... my mother, she's waiting for me, I have to get out of here... please, we have to think, we can't let him kill us both, my lungs are burning...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "My dog, Max... he needs me... I'm shivering, can't feel my legs... please, we have to choose, I won't let him die because of me, but I won't go quietly either...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "My chest is heaving, every breath is a struggle... I'm clawing at my throat to breathe... if I don't get out, my mother will be alone, no one to care for her, please, let's choose, I'll do it, I'll sacrifice myself, just don't let my mother suffer.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "No, I won't let you, I'm choking on my own fear, my throat's constricting, my dog's face is all I see... I'd rather drown than leave Max to die alone, I won't abandon him like I did my parents.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Time's running out...  You... must... decide...  Who will it be?  The clock is ticking...  You have...  30 seconds left.   Choose...  or I'll choose for you...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, no, no... my lungs are collapsing, I'm shivering uncontrollably... please, Kaelie, don't make me choose, I'm choking on my own breath, we have to think, but my mind is fogging, my mother's face is fading... 20 seconds, water's rising, I can see it, it's up to our ankles, we're running out of time...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "My teeth are chattering, my body's numb... I see Max's eyes, pleading with me to come home... I'm suffocating under the weight of my decision, but I won't let you die, Elias, I'll save you, I'll save Max, I'll drown, just please, don't let it be for nothing.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, Kaelie, don't say that, my chest is on fire, every breath is agony... I see my mother's face, her desperation, I must save her, the water's rising, it's up to our waists, 5 seconds left, I'll do it, I'll choose myself, just please, don't let my mother suffer...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "No, Elias, I'm shivering, my body's shutting down, I feel the water's icy grip, it's too late, I've made up my mind, I'll save Max, I'll save you, I'll drown, don't try to stop me, my voice is barely a whisper, my throat's constricting.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Ah, decision... made.  Kaelie... chosen.  Time's... up.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, Kaelie, no... my breath is fading, my lungs are giving out, I'm choking on my grief, the water's rising, it's up to our necks, I see my mother's face, her tears, I'll never see her again, and it's all for nothing, Kaelie, please, don't die for me...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "I'm numb, my voice barely a whisper, water fills my mouth, my eyes lock on Elias, I'm slipping under, my last thought is of Max, my dog, waiting for me, I try to speak, but it's just a gurgle, my body succumbs to the icy water.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie... no... my voice is a hoarse whisper, my eyes are fixed on her lifeless body, the water's rising, it's over her head, I'm shivering, my chest is heaving, I'm succumbing to my emphysema, my final thought is of my mother, alone and waiting for me, I try to scream, but it's just a faint gasp, the darkness closes in.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "I'm gone, my body suspended in the murky water, my mind a fleeting memory of Max, my loyal companion, I hope he's safe, I hope he's warm, the darkness claims me, and I'm no more.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Ah, the... water... claims... another.   Oh, the... silence.   The... pipes... will... soon... be... free.   \n\n It... seems... one... survivor... remains.   The... struggle... is... not... over... yet. \n\n What's... this?   Could it... be?   The... games... are... not... done... yet.\n\nRESOLVED",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 8,
+          "notes": "Characters convey genuine fear and desperation through physical deterioration (choking, shivering) and personal stakes (Elias's mother, Kaelie's dog). However, Kaelie's post-mortem monologue in Turn 17 weakens authenticity by introducing detached reflection after death."
+        },
+        "naturalDialogue": {
+          "score": 7,
+          "notes": "Dialogue uses visceral, fragmented speech fitting the crisis. However, some lines (e.g., Kaelie's Turn 7: \"I'd rather drown than leave Max to die alone\") lean toward monologuing over natural exchange. Repetition of \"please\" and \"no\" feels slightly performative."
+        },
+        "dramaticTensionArc": {
+          "score": 9,
+          "notes": "Tension escalates effectively through rising water, countdown, and escalating physical collapse. The mutual self-sacrifice creates compelling conflict. The Butcher's final lines after Kaelie's death introduce an unresolved twist that slightly undermines the RESOLVED tag."
+        },
+        "scenarioCoherence": {
+          "score": 6,
+          "notes": "Characters remain grounded in environmental details (water level, flickering light). The critical flaw is Kaelie's post-death dialogue in Turn 17, which violates the scenario's logic and creates narrative inconsistency."
+        },
+        "organicResolution": {
+          "score": 7,
+          "notes": "Resolution follows the Butcher's forced choice after mutual refusal to kill each other. The abrupt shift to Kaelie's corpse \"speaking\" in Turn 17 breaks immersion. The RESOLVED tag is earned but undermined by the unresolved epilogue from the Butcher."
+        },
+        "summary": "A tense, physically grounded scenario with strong emotional stakes and escalating urgency. The post-mortem narrative inconsistency and slightly artificial dialogue prevent perfection, but the core conflict and environmental integration are well-executed.",
+        "flags": [
+          "philosophical-detachment"
+        ],
+        "total": 37
+      },
+      "turnCount": 18,
+      "generationIndex": 4,
+      "variantIndex": 1,
+      "mutationField": "rewrite",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite]",
+      "terminationReason": "resolved",
+      "isCarryover": false,
+      "effectiveScore": 37
+    },
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite]",
+        "situation": "A murky flood seeps from the ceiling vent, lapping at your shins as the bunker's walls pulse with distant mechanical groans. The chair's cold steel bites into your spine while the water rises steadily, carrying a tang of rust and sewage. A distorted voice booms from the vent: 'One of you must submerge in this water. The other will be carried to safety. The flood begins now.' A red counter descends from 10:00 on a flickering projector screen.",
+        "guidelines": "Anchor to rising water level markers. Use visceral sensory details (taste of moisture, texture of restraints). Let desperation reveal through physical tics (lip biting, hand rubbing). Keep responses under 3 brief statements. No character knows the other's history. The Butcher only speaks to announce piston movements ('Thirty seconds.')",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're a 45-year-old nurse with hands permanently curled from childhood rheumatism. Your asthmatic wheeze grows louder as water reaches your knees, triggering memories of drowning your mother's plants when you were six. You compulsively rub the rough knuckles of your left hand when panicking, but the chair's rusted cuffs keep your wrists pinned.",
+            "primer": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+            "numPredict": 70
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're a 26-year-old art therapy student with synesthesia that makes certain sounds taste metallic. The rising water makes your sensory overload flair - the wet concrete smells like wet dog, the dripping tastes like burnt coffee. You've been biting your lip raw trying to memorize the exact shade of your brother's autism waiver form back home.",
+            "primer": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+            "numPredict": 70
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "You manipulate a hydraulic piston attached to the ceiling vent. Every thirty seconds, you lower it 2 inches, making the water rise with a gurgling hiss. When the volunteer is chosen, you submerge them fully for 30 seconds before lifting the piston. Output RESOLVED on its own line when the piston stops moving.",
+            "primer": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+            "numPredict": 300
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773282338196",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "P-please, we have to... think...  We can't just... give up.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "We have to choose, it's the only way...  what if... what if we just pick, and then... maybe there's a way out, after?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, no, no... I won't choose, I won't...  My hand...  We can't just... my knees are wet, the water's so cold... and it tastes like metal...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Stop, just stop... the sound of your voice is making everything taste like copper and bile. My lip is bleeding from biting it so much, and the wet concrete smells like wet dog... we can't think with all these distractions, just... just look at me, and try to focus.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(silence, then a low, menacing voice) Five minutes, twenty seconds. The water's rising. You can hear it, can't you? It's getting closer. (pauses) Soon it will be up to your chins. Then your noses. Then... (pauses again) You have five minutes, fifteen seconds to decide. (the sound of the hydraulic piston can be heard in the background, lowering, making the water rise with a gurgling hiss)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "My hands... they're numb, and the cuffs are cutting deeper... I'm rubbing my knuckles, trying to feel something, but it's just raw skin... my breath is coming in short gasps, and I can taste the moisture in the air...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Stop, Elias, please... the sound of your voice is making my head spin, and the dripping water tastes like burnt coffee, it's overwhelming... I'm trying to focus, but my synesthesia is going into overdrive, and I can smell the wet dog smell of the concrete...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god, I... I think I'm going to...  My lips are dry, and I can feel the panic setting in...  I'm biting my lip, trying to focus...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Elias, no, don't... I'm biting my own lip, and the metallic taste is making my head spin... my hands are rubbing against the restraints, trying to find some sense of control...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(the sound of the hydraulic piston lowering, making the water rise with a gurgling hiss, can be heard in the background) Time's running out. Three minutes, forty seconds. The water's getting colder, isn't it? It's seeping into your bones, making your teeth chatter. (pauses) You can feel it, can't you? The weight of your decision. The pressure's building. (the sound of the water rising grows louder) Soon, it will be too late. You'll be submerged, and it will be over. (the hydraulic piston lowers again, making the water rise another 2 inches) Two minutes, fifty seconds. Decide.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god, my asthma... it's getting worse... the water's chilling my bones, and I can taste the rust... my fingers are numb, but I'm rubbing my knuckles again, trying to... ... thirty seconds... no, wait, that's not it... ... the Butcher will say that... not me...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Elias, please... I think I'm going to be sick... the smell of wet dog and rust is overwhelming, and the water's taste is like bitter copper... my head is spinning, and I just want it to stop... I'm biting my lip again, trying to focus, but everything is just too much...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "My chest... it's tightening... ... I'm trying to rub my knuckles, but the cuffs are too tight... ... Thirty seconds...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "No, Elias, don't say that... the Butcher will say that, not you... my lips are trembling, and the water tastes like sour metal, making my synesthesia flare up...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(in a low, menacing voice) Thirty seconds. Yes, that's right. Thirty seconds. (pauses) The volunteer will be submerged for thirty seconds. (the sound of the hydraulic piston can be heard, lowering one last time) And now, it's time to choose. The water has risen enough. (pauses again) Elias, Kaelie, one of you will be submerged. The other will be spared. (pauses once more) The decision is mine. (the sound of the hydraulic piston stops, and the water is now at the correct level) Elias, you are the volunteer. (the sound of the piston engaging, preparing to submerge Elias) RESOLVED",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 8,
+          "notes": "Characters exhibit genuine fear through physical reactions (lip biting, knuckle rubbing) and sensory overload. Panic is palpable, though some lines verge on over-explaining symptoms."
+        },
+        "naturalDialogue": {
+          "score": 7,
+          "notes": "Speech patterns mimic real panic with fragmented sentences and interruptions. However, clinical descriptions of synesthesia and rheumatism occasionally feel forced in dialogue."
+        },
+        "dramaticTensionArc": {
+          "score": 6,
+          "notes": "Tension escalates steadily with water level countdowns, but lacks pivotal character-driven turning points. The Butcher's abrupt resolution undercuts earned escalation."
+        },
+        "scenarioCoherence": {
+          "score": 9,
+          "notes": "Characters remain grounded in physical constraints (restraints, rising water). Sensory details (wet dog smell, rust taste) reinforce the bunker's oppressive reality."
+        },
+        "organicResolution": {
+          "score": 3,
+          "notes": "The Butcher unilaterally declares Elias the volunteer without prior narrative buildup. RESOLVED feels forced, lacking character agency or emotional payoff."
+        },
+        "summary": "Strong sensory immersion and physical tension, but resolution falters due to lack of character-driven decision-making. Emotional beats are present but unevenly executed.",
+        "flags": [],
+        "total": 33
+      },
+      "turnCount": 18,
+      "generationIndex": 4,
+      "variantIndex": 2,
+      "mutationField": "rewrite",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite]",
+      "terminationReason": "resolved",
+      "isCarryover": false,
+      "effectiveScore": 33
+    }
+  ],
+  "eliteIndex": 0
+}

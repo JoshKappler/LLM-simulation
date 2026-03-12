@@ -1,63 +1,48 @@
 /**
- * Combined evaluator — rates a transcript AND generates a critique-guided
- * mutation for a target field in one LLM call. Replaces the separate
- * judge + mutator two-call pattern.
+ * Evaluator — rates transcripts and generates complete prompt rewrites.
+ *
+ * The primary flow is analyzeAndRewrite: the LLM watches the transcript,
+ * diagnoses what in the prompting caused weaknesses, then rewrites all
+ * fields from scratch (situation, characters, guidelines). This replaces
+ * the old field-by-field mutation approach.
  */
 
-import type { ConversationTurn, PromptConfig, RatingResult, MutationField } from "../types";
+import type { ConversationTurn, PromptConfig, RatingResult } from "../types";
+import { streamLLM } from "../llmClient";
 
-const OLLAMA_BASE = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
+// ── Shared rules injected into rewrite prompts ─────────────────────────────────
 
-// ── Field rules (injected into mutation prompts) ───────────────────────────────
-
-const FIELD_RULES: Record<string, string> = {
-  situation: `RULES FOR SITUATION:
+const REWRITE_RULES = `RULES FOR SITUATION:
 - Describe physical reality: what the room looks, sounds, smells like. Put characters IN the space.
 - Explain the mechanic clearly: what must happen, what the timer/consequence is, what choices exist.
 - Include survival logic: what happens if they refuse, what happens if they comply.
-- Do NOT include character direction (e.g. "you are brave", "your first instinct is").
-- Do NOT include format rules.
-- Characters should not know each other before the scenario begins.`,
+- Characters should not know each other before the scenario begins.
+- Do NOT include character direction or format rules.
 
-  character: `RULES FOR CHARACTER PROMPTS:
-- Describe who this person IS right now: name, age, occupation, personality, how fear manifests.
-- Describe what they value and what they stand to lose.
-- Do NOT explain the mechanic, timer, or rules — that belongs in the situation.
-- Do NOT give tactical instructions ("pick one concrete thing", "argue directly").
-- Leave room for the character to concede, beg, break down, or fight — all are valid.
-- No lines like "your first instinct is to survive" — just describe who they are.`,
+RULES FOR CHARACTER DESCRIPTIONS:
+- Describe who this person IS right now: personality, how fear manifests, what they value and stand to lose.
+- Do NOT explain the mechanic or timer — that belongs in the situation.
+- Do NOT give tactical instructions. Leave room for the character to concede, beg, break down, or fight.
+- No survival-instinct lines ("your first instinct is to survive"). Just describe who they are.
 
-  killer: `RULES FOR KILLER CHARACTER:
-- Preserve the core mechanic rules (timer, agreement requirement, kills both if no agreement).
-- You may change tone, verbosity, intimidation style, and pacing of countdown reminders.
-- Keep the RESOLVED trigger logic: killer outputs RESOLVED after the survivor reacts.
-- Keep the primer-style opener where the killer explains the rules plainly.
-- Do NOT add warmth or sympathy — the killer is indifferent to both characters.
-- Do NOT remove or fundamentally change the endgame logic.`,
-
-  guidelines: `RULES FOR GUIDELINES:
+RULES FOR GUIDELINES:
 - Format rules only: sentence limits, no asterisks, no stage directions, no internal thoughts.
-- Do NOT add situation-specific logic here (e.g. "you will not agree to die").
-- Do NOT add character psychology or backstory.
-- Keep it short and format-focused.`,
-};
+- Keep it short. Do NOT add situation-specific logic or character psychology here.
 
-function getFieldRules(field: MutationField): string {
-  if (field === "situation") return FIELD_RULES.situation;
-  if (field === "character_0" || field === "character_1") return FIELD_RULES.character;
-  if (field === "character_killer") return FIELD_RULES.killer;
-  if (field === "guidelines") return FIELD_RULES.guidelines;
-  return "";
-}
+RULES FOR KILLER DESCRIPTION:
+- The killer controls the scenario mechanic. Their prompt must make the RESOLVED output clear and simple.
+- Killer should output RESOLVED on its own line when the scenario ends (agreement reached or timer expires).
+- Keep killer instructions concise — complex multi-step sequences fail with smaller models.
+- Do NOT change the killer's primer — only the systemPrompt is rewritten.
 
-function getFieldLabel(field: MutationField): string {
-  if (field === "situation") return "Situation";
-  if (field === "character_0") return "Character A";
-  if (field === "character_1") return "Character B";
-  if (field === "character_killer") return "Killer Character";
-  if (field === "guidelines") return "Guidelines";
-  return field;
-}
+KNOWN FAILURE MODES (never produce prompts that trigger these):
+- Tactical character prompts ("make your case", "pick one concrete thing", "push back") → characters debate strategy instead of experiencing fear
+- Mechanic or timer description in character prompts → characters go tactical from line 1 instead of reacting emotionally
+- Vague or abstract situation text → characters treat it as background, not physical reality they're trapped in
+- Overly specific emotional prescription ("you feel desperate, you are terrified") → models perform emotion rather than embody it
+- Survival-instinct framing in character prompts → produces robotic self-preservation monologue
+- Duplicating mechanic explanation in both situation AND character prompts → models think procedurally from line 1
+- Overly complex killer instructions → killer never outputs RESOLVED, run never terminates`;
 
 // ── Prompt builders ────────────────────────────────────────────────────────────
 
@@ -65,144 +50,204 @@ function buildCurrentPrompts(config: PromptConfig): string {
   const parts: string[] = [];
   parts.push(`Situation:\n${config.situation ?? "(none)"}`);
   for (const char of config.characters ?? []) {
-    const label =
-      char.role === "killer"
-        ? `Killer (${char.name})`
-        : char.name;
+    const label = char.role === "killer" ? `Killer (${char.name})` : char.name;
     parts.push(`${label}:\n${char.systemPrompt ?? "(none)"}`);
   }
   if (config.guidelines) parts.push(`Guidelines:\n${config.guidelines}`);
   return parts.join("\n\n");
 }
 
-function buildTranscript(turns: ConversationTurn[]): string {
-  return turns
-    .filter((t) => !t.isStreaming && t.content.trim())
-    .map((t, i) => `[TURN ${i + 1} — ${t.agentName}]: ${t.content}`)
-    .join("\n");
+const MAX_TRANSCRIPT_TURNS = 20;
+
+function buildTranscript(turns: ConversationTurn[], maxTurns = MAX_TRANSCRIPT_TURNS): string {
+  const filtered = turns.filter((t) => !t.isStreaming && t.content.trim());
+  const limited = filtered.length > maxTurns ? filtered.slice(-maxTurns) : filtered;
+  return limited.map((t, i) => `[TURN ${i + 1} — ${t.agentName}]: ${t.content}`).join("\n");
 }
 
-function buildEvaluateAndMutatePrompt(
+function buildCharacterNames(config: PromptConfig): string {
+  return (config.characters ?? [])
+    .map((c) => `"${c.name}"`)
+    .join(", ");
+}
+
+function buildCharEntries(config: PromptConfig): string {
+  return (config.characters ?? [])
+    .map((c) => {
+      const comment = c.role === "killer" ? " /* killer — keep RESOLVED output simple */" : "";
+      return `    {"name": "${c.name}", "systemPrompt": "... completely new description ..."}${comment}`;
+    })
+    .join(",\n");
+}
+
+function buildFullRewriteSchema(config: PromptConfig): string {
+  return `{
+  "rating": {
+    "emotionalAuthenticity": {"score": 0, "notes": "..."},
+    "naturalDialogue": {"score": 0, "notes": "..."},
+    "dramaticTensionArc": {"score": 0, "notes": "..."},
+    "scenarioCoherence": {"score": 0, "notes": "..."},
+    "organicResolution": {"score": 0, "notes": "..."},
+    "summary": "...",
+    "flags": []
+  },
+  "situation": "... completely new situation ...",
+  "characters": [
+${buildCharEntries(config)}
+  ],
+  "guidelines": "... new guidelines ..."
+}`;
+}
+
+function buildPromptsOnlySchema(config: PromptConfig): string {
+  return `{
+  "situation": "... completely new situation ...",
+  "characters": [
+${buildCharEntries(config)}
+  ],
+  "guidelines": "... new guidelines ..."
+}`;
+}
+
+function buildAnalyzeAndRewritePrompt(
   config: PromptConfig,
   turns: ConversationTurn[],
-  targetField: MutationField,
+  eliteConfig?: PromptConfig,
+  eliteScore?: number,
 ): string {
   const transcript = buildTranscript(turns);
-  const prompts = buildCurrentPrompts(config);
-  const fieldLabel = getFieldLabel(targetField);
-  const fieldRules = getFieldRules(targetField);
-  const includesMutation = targetField !== "seed" && targetField !== "crossover";
+  const charNames = buildCharacterNames(eliteConfig ?? config);
+  const schema = buildFullRewriteSchema(eliteConfig ?? config);
 
-  const mutationTask = includesMutation
-    ? `
-STEP 2 — MUTATE: Rewrite the "${fieldLabel}" field to address the weakest dimension above. Use the critique notes as your guide.
+  const hasElite = eliteConfig && eliteScore !== undefined;
+  const elitePrompts = hasElite ? buildCurrentPrompts(eliteConfig!) : null;
+  const currentPrompts = buildCurrentPrompts(config);
 
-${fieldRules}
+  const promptsSection = hasElite
+    ? `BEST PERFORMING PROMPTS (score: ${eliteScore}/50 — use as your baseline):
+${elitePrompts}
 
-The new text must be meaningfully different from the original — not just rephrased.`
+TEST RUN PROMPTS (what was running when this transcript was produced):
+${currentPrompts}`
+    : `CURRENT PROMPTS:
+${currentPrompts}`;
+
+  const calibration = hasElite
+    ? `\nCalibration: the best run so far scored ${eliteScore}/50. If this run scored similarly, make small targeted changes. If this run scored significantly lower, more substantial rethinking is warranted — but always start from the BEST PERFORMING PROMPTS, not from scratch.\n`
     : "";
 
-  const mutationOutput = includesMutation
-    ? `,\n  "mutatedText": "... new ${fieldLabel} text ..."`
-    : "";
+  return `You are a drama critic and prompt engineer. A roleplay scenario ran and produced the transcript below. Your job is to understand what went wrong and improve the prompts.
 
-  return `You are a drama critic and prompt engineer evaluating a roleplay transcript.
-
-CURRENT PROMPTS:
-${prompts}
+${promptsSection}
 
 TRANSCRIPT:
 ${transcript}
 
-STEP 1 — RATE this transcript on 5 dimensions (0–10 integers each):
-- emotionalAuthenticity: Do the characters sound genuinely scared or desperate? Penalize theatrical bravado or calm acceptance.
-- naturalDialogue: Do they speak like real people under pressure? Penalize debate-style argument or clinical language.
+STEP 1 — RATE the transcript (0–10 integers each):
+- emotionalAuthenticity: Do characters sound genuinely scared or desperate? Penalize theatrical bravado, detachment, or calm acceptance.
+- naturalDialogue: Do they speak like real people under pressure? Penalize debate-style argument, bullet reasoning, or clinical language.
 - dramaticTensionArc: Does the conversation escalate with meaningful beats? Penalize flat exchanges or instant resolution.
 - scenarioCoherence: Do characters stay grounded in the physical situation? Penalize invented backstory or ignoring the mechanic.
-- organicResolution: Does it end naturally? Penalize abrupt RESOLVED without setup, or circular stalemates.
-${mutationTask}
+- organicResolution: Does it end naturally (agreement, breakdown, or unresolved)? Penalize abrupt RESOLVED without setup, or circular stalemates.
+
+Score each dimension independently based on what you actually observed. A typical roleplay run scores between 3 and 8 on each dimension. Reserve 0 for transcripts that are completely empty or unintelligible.
+${calibration}
+STEP 2 — DIAGNOSE: Identify the 2–3 most underwhelming moments in the transcript. For each, trace it back to something specific in the prompts that likely caused it.
+
+STEP 3 — IMPROVE: Starting from the BEST PERFORMING PROMPTS${hasElite ? "" : " (the current prompts)"}, make targeted improvements based on your diagnosis. Only change the fields responsible for the specific problems you identified. If a field is not contributing to the weaknesses, preserve its core content. Every change must be justified by a specific observation. Preserve character names (${charNames}).
+
+${REWRITE_RULES}
 
 Return ONLY valid JSON (no markdown, no preamble):
-{
-  "rating": {
-    "emotionalAuthenticity": { "score": 0, "notes": "..." },
-    "naturalDialogue": { "score": 0, "notes": "..." },
-    "dramaticTensionArc": { "score": 0, "notes": "..." },
-    "scenarioCoherence": { "score": 0, "notes": "..." },
-    "organicResolution": { "score": 0, "notes": "..." },
-    "total": 0,
-    "summary": "...",
-    "flags": []
-  }${mutationOutput}
-}
+${schema}
 
 flags must only contain labels from: ["name-chanting", "backstory-dump", "philosophical-detachment", "robotic-compliance", "invented-relationship", "debate-strategy"]`;
 }
 
-function buildMutationFromCritiquePrompt(
-  config: PromptConfig,
-  existingRating: RatingResult,
-  targetField: MutationField,
-): string {
+function buildRewriteFromCritiquePrompt(config: PromptConfig, rating: RatingResult): string {
   const prompts = buildCurrentPrompts(config);
-  const fieldLabel = getFieldLabel(targetField);
-  const fieldRules = getFieldRules(targetField);
+  const charNames = buildCharacterNames(config);
 
-  const weaknesses = (
+  const critique = (
     ["emotionalAuthenticity", "naturalDialogue", "dramaticTensionArc", "scenarioCoherence", "organicResolution"] as const
   )
-    .map((k) => `- ${k}: ${existingRating[k].score}/10 — ${existingRating[k].notes}`)
+    .map((k) => `- ${k}: ${rating[k].score}/10 — ${rating[k].notes}`)
     .join("\n");
 
-  return `You are a prompt engineer improving a roleplay scenario. Use this critique to rewrite one field.
+  return `You are a prompt engineer. Here is a critique of the current best roleplay scenario run:
 
-CRITIQUE OF THE CURRENT BEST RUN:
-${weaknesses}
-Summary: ${existingRating.summary}
-${existingRating.flags.length > 0 ? `Flags: ${existingRating.flags.join(", ")}` : ""}
+CRITIQUE:
+${critique}
+Summary: ${rating.summary}
+${rating.flags.length > 0 ? `Flags: ${rating.flags.join(", ")}` : ""}
 
-CURRENT PROMPTS:
+CURRENT BEST PROMPTS (score: ${rating.total}/50):
 ${prompts}
 
-TASK: Rewrite the "${fieldLabel}" field to address the weakest dimensions above.
+Based on the critique above, make targeted improvements to these prompts. Only change the fields that are causing the identified problems. Preserve what is already working. Every change must address a specific issue in the critique. Preserve character names (${charNames}).
 
-${fieldRules}
+${REWRITE_RULES}
 
-The new text must be meaningfully different from the current version.
-Return ONLY the new ${fieldLabel} text, no preamble, no explanation.`;
+Return ONLY valid JSON (no markdown):
+${buildPromptsOnlySchema(config)}`;
 }
 
-// ── Ollama call ────────────────────────────────────────────────────────────────
+// ── LLM call ───────────────────────────────────────────────────────────────────
 
-async function callModel(model: string, prompt: string, jsonMode: boolean, signal?: AbortSignal): Promise<string> {
-  const body: Record<string, unknown> = {
-    model,
-    messages: [{ role: "user", content: prompt }],
-    stream: false,
-    think: false,
-    options: {
-      temperature: jsonMode ? 0.3 : 0.85,
-      num_predict: jsonMode ? 3000 : 1200,
-    },
-  };
-  if (jsonMode) body.format = "json";
+const CALL_TIMEOUT_MS = 120_000; // 2-minute hard timeout per LLM call
 
-  const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal,
-  });
+async function callModel(model: string, prompt: string, jsonMode: boolean, signal?: AbortSignal, onToken?: (token: string) => void, temperatureOverride?: number): Promise<string> {
+  if (signal?.aborted) throw Object.assign(new Error("AbortError"), { name: "AbortError" });
 
-  if (!res.ok) {
-    throw new Error(`Evaluator model ${res.status}: ${await res.text().catch(() => "(no body)")}`);
+  // Combine job abort signal with a per-call timeout so a hanging Groq request
+  // doesn't block the orchestrator indefinitely.
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(new Error("LLM call timed out")), CALL_TIMEOUT_MS);
+
+  // If the job abort signal fires, forward it to the timeout controller so the
+  // stream aborts immediately. This replaces AbortSignal.any for compatibility.
+  const onJobAbort = () => timeoutController.abort(signal!.reason ?? new Error("Job aborted"));
+  if (signal && !signal.aborted) {
+    signal.addEventListener("abort", onJobAbort, { once: true });
+  } else if (signal?.aborted) {
+    throw Object.assign(new Error("AbortError"), { name: "AbortError" });
   }
+  const combined = timeoutController.signal;
 
-  const data = await res.json();
-  return (data?.message?.content ?? "").trim();
+  let fullContent = "";
+  try {
+    for await (const chunk of streamLLM({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      temperature: temperatureOverride ?? (jsonMode ? 0.4 : 0.9),
+      maxTokens: jsonMode ? 5000 : 2000,
+      // Omit response_format — Groq's json_object mode with streaming can hang for
+      // certain model/prompt combos. The prompts already explicitly request JSON output.
+      signal: combined,
+    })) {
+      fullContent += chunk;
+      onToken?.(chunk);
+    }
+  } finally {
+    clearTimeout(timeoutId);
+    signal?.removeEventListener("abort", onJobAbort);
+  }
+  let output = fullContent.trim();
+  // Strip think blocks that reasoning models (e.g. deepseek-r1, qwen-qwq) prepend before JSON
+  output = output.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  // Strip markdown code fences
+  output = output.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+  return output;
 }
 
-// ── Response parsing ──────────────────────────────────────────────────────────
+// ── Response parsing ───────────────────────────────────────────────────────────
+
+/** Extract the first JSON object/array from a string that may have leading prose. */
+function extractJsonString(raw: string): string {
+  if (raw.startsWith("{") || raw.startsWith("[")) return raw;
+  const match = raw.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  return match ? match[1] : raw;
+}
 
 function parseRating(parsed: Record<string, unknown>): RatingResult {
   const dim = (key: string) => {
@@ -231,109 +276,129 @@ function parseRating(parsed: Record<string, unknown>): RatingResult {
   return r;
 }
 
-function tryParseEvalResponse(raw: string): { rating: RatingResult; mutatedText: string | undefined } | null {
+function applyNewPromptsToConfig(
+  base: PromptConfig,
+  parsed: Record<string, unknown>,
+): PromptConfig {
+  const config: PromptConfig = JSON.parse(JSON.stringify(base));
+
+  if (typeof parsed.situation === "string" && parsed.situation.trim()) {
+    config.situation = parsed.situation.trim();
+  }
+  if (typeof parsed.guidelines === "string" && parsed.guidelines.trim()) {
+    config.guidelines = parsed.guidelines.trim();
+  }
+
+  if (Array.isArray(parsed.characters)) {
+    const newChars = parsed.characters as { name?: string; systemPrompt?: string }[];
+    // Match by index — all characters (including killer) are now included in the schema
+    newChars.forEach((nc, ni) => {
+      const existing = config.characters?.[ni];
+      if (!existing) return;
+      if (typeof nc.systemPrompt === "string" && nc.systemPrompt.trim()) {
+        // Preserve everything except systemPrompt (primer, model, numPredict, role all stay)
+        config.characters![ni] = { ...existing, systemPrompt: nc.systemPrompt.trim() };
+      }
+    });
+  }
+
+  config.name = `${base.name} [rewrite]`;
+  return config;
+}
+
+function tryParseRewriteResponse(
+  raw: string,
+  base: PromptConfig,
+): { rating: RatingResult; newConfig: PromptConfig } | null {
   try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (!parsed.rating) return null;
+    const parsed = JSON.parse(extractJsonString(raw)) as Record<string, unknown>;
+    if (!parsed.rating || !parsed.situation) return null;
     const rating = parseRating(parsed.rating as Record<string, unknown>);
-    const mutatedText: string | undefined =
-      typeof parsed.mutatedText === "string" && parsed.mutatedText.trim()
-        ? parsed.mutatedText.trim()
-        : undefined;
-    return { rating, mutatedText };
+    // Detect template echo: model returned schema example without filling it in
+    const allZero = (
+      [rating.emotionalAuthenticity, rating.naturalDialogue, rating.dramaticTensionArc, rating.scenarioCoherence, rating.organicResolution] as { score: number; notes: string }[]
+    ).every((d) => d.score === 0 && (!d.notes || d.notes === "..."));
+    if (allZero) return null;
+    const newConfig = applyNewPromptsToConfig(base, parsed);
+    return { rating, newConfig };
   } catch {
     return null;
   }
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
+function tryParsePromptsOnly(raw: string, base: PromptConfig): PromptConfig | null {
+  try {
+    const parsed = JSON.parse(extractJsonString(raw)) as Record<string, unknown>;
+    if (!parsed.situation) return null;
+    return applyNewPromptsToConfig(base, parsed);
+  } catch {
+    return null;
+  }
+}
+
+// ── Public API ─────────────────────────────────────────────────────────────────
 
 /**
- * Rate a transcript AND generate a critique-guided mutation for targetField,
- * all in a single LLM call.
- *
- * For seed/crossover variants, mutatedText will be undefined (rating only).
+ * Rate a transcript AND generate an improved set of prompts in one LLM call.
+ * The LLM diagnoses what in the prompting caused weaknesses, then makes targeted
+ * improvements — starting from eliteConfig (if provided) as the baseline, not from scratch.
  */
-export async function evaluateAndMutate(
+export async function analyzeAndRewrite(
   config: PromptConfig,
   turns: ConversationTurn[],
-  targetField: MutationField,
   model: string,
   signal?: AbortSignal,
-): Promise<{ rating: RatingResult | null; mutatedText: string | undefined }> {
+  onToken?: (token: string) => void,
+  eliteConfig?: PromptConfig,
+  eliteScore?: number,
+): Promise<{ rating: RatingResult | null; newConfig: PromptConfig | null }> {
   if (turns.filter((t) => !t.isStreaming).length < 2) {
-    return { rating: null, mutatedText: undefined };
+    return { rating: null, newConfig: null };
   }
 
-  const prompt = buildEvaluateAndMutatePrompt(config, turns, targetField);
+  const baseConfig = eliteConfig ?? config;
+  const prompt = buildAnalyzeAndRewritePrompt(config, turns, eliteConfig, eliteScore);
 
   try {
-    const raw = await callModel(model, prompt, true, signal);
-    const result = tryParseEvalResponse(raw);
+    const raw = await callModel(model, prompt, true, signal, onToken);
+    const result = tryParseRewriteResponse(raw, baseConfig);
     if (result) return result;
 
     // Retry
-    const raw2 = await callModel(model, prompt + "\n\nIMPORTANT: Return ONLY the JSON object.", true, signal);
-    return tryParseEvalResponse(raw2) ?? { rating: null, mutatedText: undefined };
-  } catch {
-    return { rating: null, mutatedText: undefined };
+    const raw2 = await callModel(
+      model,
+      prompt + "\n\nIMPORTANT: Return ONLY the JSON object. No text before or after.",
+      true,
+      signal,
+      onToken,
+    );
+    return tryParseRewriteResponse(raw2, baseConfig) ?? { rating: null, newConfig: null };
+  } catch (err) {
+    if (signal?.aborted) throw err;
+    return { rating: null, newConfig: null };
   }
 }
 
 /**
- * Generate a critique-guided mutation for targetField using an existing rating
- * (no transcript needed — used for the carryover/elite bootstrap case).
+ * Generate a complete prompt rewrite from an existing rating critique, without a transcript.
+ * Used to bootstrap the first rewrite in a generation when the seed is carried over.
  */
-export async function generateMutationFromCritique(
+export async function generateCompleteRewrite(
   config: PromptConfig,
-  existingRating: RatingResult,
-  targetField: MutationField,
+  rating: RatingResult,
   model: string,
   signal?: AbortSignal,
-): Promise<string | null> {
-  if (targetField === "seed" || targetField === "crossover") return null;
-
-  const prompt = buildMutationFromCritiquePrompt(config, existingRating, targetField);
+  onToken?: (token: string) => void,
+): Promise<PromptConfig | null> {
+  const prompt = buildRewriteFromCritiquePrompt(config, rating);
 
   try {
-    const text = await callModel(model, prompt, false, signal);
-    return text || null;
-  } catch {
+    const raw = await callModel(model, prompt, true, signal, onToken);
+    return tryParsePromptsOnly(raw, config);
+  } catch (err) {
+    if (signal?.aborted) throw err;
     return null;
   }
-}
-
-/**
- * Apply a text mutation to the appropriate field of a config.
- */
-export function applyTextMutation(
-  base: PromptConfig,
-  field: MutationField,
-  text: string,
-): PromptConfig {
-  const config: PromptConfig = JSON.parse(JSON.stringify(base));
-  const chars = config.characters ?? [];
-
-  if (field === "situation") {
-    config.situation = text;
-  } else if (field === "character_0" && chars[0]) {
-    config.characters = [...chars];
-    config.characters[0] = { ...chars[0], systemPrompt: text };
-  } else if (field === "character_1" && chars[1]) {
-    config.characters = [...chars];
-    config.characters[1] = { ...chars[1], systemPrompt: text };
-  } else if (field === "character_killer") {
-    config.characters = [...chars];
-    const killerIdx = config.characters.findIndex((c) => c.role === "killer");
-    if (killerIdx >= 0) {
-      config.characters[killerIdx] = { ...config.characters[killerIdx], systemPrompt: text };
-    }
-  } else if (field === "guidelines") {
-    config.guidelines = text;
-  }
-
-  config.name = `${base.name} [${field}]`;
-  return config;
 }
 
 /**
@@ -361,9 +426,145 @@ ${tB}
 Which transcript is dramatically superior? Reply with only the letter A or B.`;
 
   try {
-    const raw = await callModel(model, prompt, false, signal);
+    // Low temperature for deterministic comparison verdicts
+    const raw = await callModel(model, prompt, false, signal, undefined, 0.1);
     return raw.trim().toUpperCase().startsWith("A") ? "a" : "b";
-  } catch {
+  } catch (err) {
+    if (signal?.aborted) throw err;
     return "a"; // default to keeping current best on error
+  }
+}
+
+// ── Separated rating & mutation (for restructured orchestrator) ─────────────
+
+/**
+ * Rate a transcript WITHOUT generating a rewrite.
+ * Used in the evaluation phase after all runs complete.
+ */
+export async function rateTranscript(
+  config: PromptConfig,
+  turns: ConversationTurn[],
+  model: string,
+  signal?: AbortSignal,
+  onToken?: (token: string) => void,
+): Promise<RatingResult | null> {
+  if (turns.filter((t) => !t.isStreaming).length < 2) return null;
+
+  const transcript = buildTranscript(turns);
+  const prompts = buildCurrentPrompts(config);
+
+  const prompt = `You are a drama critic. Rate this roleplay transcript on 5 dimensions.
+
+PROMPTS THAT PRODUCED THIS TRANSCRIPT:
+${prompts}
+
+TRANSCRIPT:
+${transcript}
+
+Rate each dimension independently (0–10 integers):
+- emotionalAuthenticity: Do characters sound genuinely scared or desperate? Penalize theatrical bravado, detachment, or calm acceptance.
+- naturalDialogue: Do they speak like real people under pressure? Penalize debate-style argument, bullet reasoning, or clinical language.
+- dramaticTensionArc: Does the conversation escalate with meaningful beats? Penalize flat exchanges or instant resolution.
+- scenarioCoherence: Do characters stay grounded in the physical situation? Penalize invented backstory or ignoring the mechanic.
+- organicResolution: Does it end naturally (agreement, breakdown, or unresolved)? Penalize abrupt RESOLVED without setup, or circular stalemates.
+
+A typical roleplay run scores between 3 and 8 on each dimension. Reserve 0 for transcripts that are completely empty or unintelligible.
+
+Return ONLY valid JSON (no markdown, no preamble):
+{
+  "emotionalAuthenticity": {"score": 0, "notes": "..."},
+  "naturalDialogue": {"score": 0, "notes": "..."},
+  "dramaticTensionArc": {"score": 0, "notes": "..."},
+  "scenarioCoherence": {"score": 0, "notes": "..."},
+  "organicResolution": {"score": 0, "notes": "..."},
+  "summary": "...",
+  "flags": []
+}
+
+flags must only contain labels from: ["name-chanting", "backstory-dump", "philosophical-detachment", "robotic-compliance", "invented-relationship", "debate-strategy"]`;
+
+  try {
+    const raw = await callModel(model, prompt, true, signal, onToken);
+    const parsed = JSON.parse(extractJsonString(raw)) as Record<string, unknown>;
+    const rating = parseRating(parsed);
+    // Detect template echo
+    const allZero = (
+      [rating.emotionalAuthenticity, rating.naturalDialogue, rating.dramaticTensionArc, rating.scenarioCoherence, rating.organicResolution] as { score: number; notes: string }[]
+    ).every((d) => d.score === 0 && (!d.notes || d.notes === "..."));
+    if (allZero) return null;
+    return rating;
+  } catch (err) {
+    if (signal?.aborted) throw err;
+    return null;
+  }
+}
+
+/**
+ * Generate a single prompt mutation from a parent config.
+ * Uses the mutation model (separate from the judge model).
+ * If a critique is provided, mutations target the weakest dimensions.
+ */
+export async function generateMutation(
+  parentConfig: PromptConfig,
+  critique: RatingResult | null,
+  model: string,
+  signal?: AbortSignal,
+  onToken?: (token: string) => void,
+): Promise<PromptConfig | null> {
+  const prompts = buildCurrentPrompts(parentConfig);
+  const charNames = buildCharacterNames(parentConfig);
+
+  let critiqueSection: string;
+  if (critique) {
+    const dims = (
+      ["emotionalAuthenticity", "naturalDialogue", "dramaticTensionArc", "scenarioCoherence", "organicResolution"] as const
+    )
+      .map((k) => `- ${k}: ${critique[k].score}/10 — ${critique[k].notes}`)
+      .join("\n");
+    critiqueSection = `PERFORMANCE CRITIQUE (score: ${critique.total}/50):
+${dims}
+Summary: ${critique.summary}
+${critique.flags.length > 0 ? `Flags: ${critique.flags.join(", ")}` : ""}
+
+Focus your changes on the weakest dimensions. Make targeted, meaningful improvements.`;
+  } else {
+    critiqueSection = `This is an initial exploration round with no performance data yet. Create a distinct variation that takes the scenario in an interesting direction while maintaining the core premise and tone.`;
+  }
+
+  const schema = buildPromptsOnlySchema(parentConfig);
+
+  const prompt = `You are a prompt engineer evolving roleplay scenarios through a genetic algorithm. Your job is to create ONE creative variation of the current prompts.
+
+CURRENT PROMPTS:
+${prompts}
+
+${critiqueSection}
+
+${REWRITE_RULES}
+
+Preserve character names (${charNames}). Preserve character roles (character/killer).
+Do NOT return identical prompts — every variant must differ meaningfully from the parent.
+
+Return ONLY valid JSON (no markdown, no preamble):
+${schema}`;
+
+  try {
+    const raw = await callModel(model, prompt, true, signal, onToken, 0.8);
+    const result = tryParsePromptsOnly(raw, parentConfig);
+    if (result) return result;
+
+    // Retry once with a stricter instruction if parse failed
+    const raw2 = await callModel(
+      model,
+      prompt + "\n\nIMPORTANT: Return ONLY the JSON object. No markdown, no text before or after.",
+      true,
+      signal,
+      onToken,
+      0.8,
+    );
+    return tryParsePromptsOnly(raw2, parentConfig);
+  } catch (err) {
+    if (signal?.aborted) throw err;
+    return null;
   }
 }

@@ -113,7 +113,8 @@ export function buildChatMessages(
   const primer = characters[speakingIndex]?.primer;
   const hasSpoken = allCompleted.some((t) => t.agentIndex === speakingIndex);
   if (primer && !hasSpoken) {
-    if (openingLine) messages.push({ role: "user", content: openingLine });
+    // Always push a user message before the primer — Groq/OpenAI require user before assistant.
+    messages.push({ role: "user", content: openingLine || "…" });
     messages.push({ role: "assistant", content: primer });
   }
 
@@ -132,6 +133,10 @@ export function buildChatMessages(
       if (pendingUser) {
         messages.push({ role: "user", content: pendingUser });
         pendingUser = "";
+      } else if (messages.length === 0) {
+        // Windowed history starts with the speaker's own turn — inject a placeholder
+        // so the assistant message isn't the first message (invalid for strict APIs).
+        messages.push({ role: "user", content: openingLine || "…" });
       }
       if (turn.content.trim()) {
         messages.push({ role: "assistant", content: `${characters[speakingIndex]?.name ?? turn.agentName}: ${turn.content}` });

@@ -1,53 +1,57 @@
 import { NextRequest } from "next/server";
 import type { ChatRequest } from "@/lib/types";
+import { streamLLM } from "@/lib/llmClient";
 
 export const runtime = "nodejs";
-
-const OLLAMA_BASE = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
 
 export async function POST(req: NextRequest) {
   const body = (await req.json()) as ChatRequest;
 
-  const ollamaMessages = [
-    { role: "system", content: body.system },
-    ...body.messages,
+  const messages = [
+    { role: "system" as const, content: body.system },
+    ...body.messages.map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    })),
   ];
 
-  let ollamaRes: Response;
-  try {
-    ollamaRes = await fetch(`${OLLAMA_BASE}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  const encoder = new TextEncoder();
+  const readable = new ReadableStream({
+    async start(controller) {
+      const stream = streamLLM({
         model: body.model,
-        messages: ollamaMessages,
-        stream: true,
-        think: false,
-        options: {
-          temperature: body.temperature,
-          repeat_penalty: 1.05,
-          ...(body.numPredict !== undefined && { num_predict: body.numPredict }),
-          ...(body.minP !== undefined && { min_p: body.minP }),
-          ...(body.stop !== undefined && { stop: body.stop }),
+        messages,
+        temperature: body.temperature,
+        ...(body.numPredict !== undefined && { maxTokens: body.numPredict }),
+        ...(body.stop?.length && { stop: body.stop }),
+        onRateLimit: (waitMs) => {
+          const secs = Math.ceil(waitMs / 1000);
+          controller.enqueue(
+            encoder.encode(
+              JSON.stringify({ type: "rate_limit", retryMs: waitMs, retrySecs: secs, done: false }) + "\n",
+            ),
+          );
         },
-      }),
-    });
-  } catch {
-    return new Response(
-      JSON.stringify({ error: "Could not connect to Ollama. Is it running?" }),
-      { status: 502, headers: { "Content-Type": "application/json" } }
-    );
-  }
+      });
+      try {
+        for await (const chunk of stream) {
+          const line =
+            JSON.stringify({ message: { role: "assistant", content: chunk }, done: false }) + "\n";
+          controller.enqueue(encoder.encode(line));
+        }
+        controller.enqueue(encoder.encode(JSON.stringify({ done: true }) + "\n"));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        controller.enqueue(
+          encoder.encode(JSON.stringify({ error: msg, done: true }) + "\n"),
+        );
+      } finally {
+        controller.close();
+      }
+    },
+  });
 
-  if (!ollamaRes.ok || !ollamaRes.body) {
-    const body = await ollamaRes.text().catch(() => "(no body)");
-    return new Response(
-      JSON.stringify({ error: `Ollama ${ollamaRes.status}: ${body}` }),
-      { status: 502, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  return new Response(ollamaRes.body, {
+  return new Response(readable, {
     headers: {
       "Content-Type": "application/x-ndjson",
       "Transfer-Encoding": "chunked",
