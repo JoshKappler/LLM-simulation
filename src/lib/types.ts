@@ -114,6 +114,7 @@ export interface RatingResult {
   total: number; // sum 0–50
   summary: string;
   flags: string[];
+  diagnosis: string; // 2-3 weakest moments: quoted lines traced to prompt problems
 }
 
 export type MutationField =
@@ -125,6 +126,7 @@ export type MutationField =
   | "seed"
   | "crossover"
   | "rewrite"
+  | "explore"
   | "parent_copy";
 
 export interface RatedConfig {
@@ -141,12 +143,14 @@ export interface RatedConfig {
   terminationReason?: string;
   isCarryover?: boolean;
   effectiveScore?: number;
+  changeDescription?: string; // brief summary of what changed vs parent
 }
 
 export interface GenerationRecord {
   index: number;
   startedAt: string;
   completedAt?: string;
+  complete?: boolean;
   variants: RatedConfig[];
   eliteIndex: number;
 }
@@ -167,6 +171,7 @@ export interface OptimizationJob {
   mutationModel: string;
   characterModel?: string; // overrides model for all roleplay agents; falls back to config's own model
   population: RatedConfig[]; // top 10 all-time by score
+  pendingRewrites?: PromptConfig[]; // diagnosis-informed rewrites from generateRewrite, used as variants in next gen
   stopFlag?: boolean;
   lastError?: string;
 }

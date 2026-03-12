@@ -1,0 +1,699 @@
+{
+  "index": 5,
+  "startedAt": "2026-03-12T05:00:34.578Z",
+  "completedAt": "2026-03-12T05:01:14.818Z",
+  "complete": true,
+  "variants": [
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite]",
+        "situation": "Elias finds himself strapped to a gurney in a cramped, dimly lit morgue. Flickering fluorescent lights reflect off cold steel surfaces, casting an eerie glow. The air is heavy with the scent of disinfectant and damp earth. A small, framed photograph on the wall bears the words 'Serenity's Garden' and a faded image of a vibrant forest. A gentle, pulsing hum emanates from the room's corners, where medical equipment hums softly. Elias is aware that his ailing daughter, Rachel, relies on his care at home. He is worried about making ends meet at his struggling convenience store. Suddenly, a woman, Kaelie, is wheeled into the room on an adjacent gurney, her eyes darting frantically between the door and Elias. The Butcher stands just beyond the entrance, watching them with an unreadable presence. A countdown timer reads 10:10. 'The rules are simple: one of you will leave with me. And that's all,' The Butcher's monotone voice announces, '10 minutes to decide.'",
+        "guidelines": "Character names must always come first. Do not make any strategic pleas beyond the current minute, just try to find the connection between the two trapped victims. The outcome: one leaves, and the countdown ends. You will only get one response per character for this trial.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You are consumed by guilt: Your daughter needs you at home, and you fear abandoning her for just a moment. Yet, the idea of losing you sends your wife into another episode of depression. What do you do in this desperate predicament?",
+            "primer": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+            "numPredict": 90
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You are an introverted artist whose work brings solace to those suffering with mental illness — your unique style has the ability to capture their innermost thoughts and fears. As such, your art often reflects the pain you've endured. How much of yourself do you reveal with your art, and what do you think about sharing it with the world.",
+            "primer": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+            "numPredict": 100
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "It is almost time to pick another piece. This game has grown stale; the participants all seem to be searching for what I'll find beautiful. It is only when their desperation takes over that the true art begins. As you watch the scene unfold, decide which one is worth adding to you collection.",
+            "primer": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+            "numPredict": 250
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773291612123",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Please... I don't want this to happen. I'll never see my daughter grow up, my wife... she needs me... Oh god. We were at home, I left for a minute to take some trash outside, and... Kaelie, what brought you here? Do you know something I don't know? Please, look at me, and... and can we talk? Maybe, if we talk and think really fast",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Shush, stop pleading with them, they don't care! We need to use our heads, not our emotions. Think about it... this can't have anything to do with you or your family, or they'd just tell you to spare me. This could be some messed-up test or assessment, something that requires us to be... creative, resourceful. And, honestly, my life is the one more worthless to me now if we're just going to get killed like",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh no, no, no... You can't be serious. WORTHLESS?! Are you kidding me?! You're saying you're just going to give up because it looks like we're being murdered?! How could anyone be prepared for something like this? This isn't about creative or resourceful, it's a nightmare! And how can you be so sure... my family, my life, they're precious to me. I've",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Oh, so now you're a victim with a family, huh? News flash,",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Ah, spare me. Your theatrics are as expected. Both of you would have cried about this by now if you hadn't. But that's just it. You wouldn't. You'd have been killed quietly. So now you two have decided to indulge me in your petty squabbles and pretend you care for these trivial concepts of 'life' and 'love'. It's nice. But, really? That's what I wanted when I started. The despair, I want the fear in my pieces, in this game... and this just isn't doing it.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, you have no damn idea what this is about! You're talking like some sick game, and this isn't a game to me! But if I've managed to stir something in you... that's maybe not a good direction. Listen, think about that photograph on the wall over there. Serenity's Garden? Maybe this is more about your sanity than ours, about something you've made up in this... twisted imagination.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Serenity's Garden... That looks familiar, but I'm not sure where from. Does it have anything to do with my art collection? The piece with the garden scene from the inside out... where life grows through a graveyard of broken toys and rusted machinery? Or maybe... maybe it's more than my work. It's a glimpse into your own madness. Maybe it's not just about what you've 'observed', but what you've 'done' in Serenity",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, that can't be it... My heart's racing now, thinking about you somehow knowing about our family's past, about the stories my wife whispers at night... about the little girl whose doll you carved and left in the garden in Serenity's. That can't be... But, that would connect us in more than what The Butcher had initially wanted... If that photograph meant your creation was linked to my own family...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Yes... It means The Butcher's been watching you too, doesn't it? Maybe for far longer than he's been watching me. If those memories haunt you so badly, that means they must also be tied to your own darkness. You know exactly what I mean, Elias. The Serenity's Garden piece, it was inspired not by our experiences, but yours. My 'pain' reflected yours, your art. I never thought I painted more than just emotions. That",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Enough. Not a single one of you realizes what's actually going on here. Yes, I've watched this family for what feels like an eternity. And no, this isn't about Serenity's Garden or any twisted connection between us. I'll let you know, for once, that your desperate attempt to find something meaningful, anything you could use to cling onto, was futile. Serenity's Garden is just a piece I've collected. You two think there's meaning behind each piece because of what resonated in one piece, one memory with another; But, there's nothing special about Serenity's Garden, nothing special except a beautiful story. Your desperation makes it meaningful... but for what reason? Because of who you are? Or because we're at the edge of death together?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... What... what have I done? No, it can't be... That garden, the toys, the graveyard... it was me, wasn't it? I carved those things, made that hellish place where Rachel's favorite doll lies broken. The pictures my wife paints, they reflect our story but they also come from me, from something darker, and... Oh, Kaelie's right, her art mirrored mine",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "I was right... But it's not just a dark connection between yours and mine. It's something deeper in you, Elias. I'm beginning to see that your stories, your art, even the ones about your family are just layers protecting your true self. And I, too, have those layers because your creations, your stories are reflected in mine. Serenity's Garden isn't just a place; it's a collection of people and stories bound by the shared darkness within themselves",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Wait... what?! I... I don't understand. You're not making any sense. If we're connected like that, how is any of this possible? This Butcher, he's behind all of this isn't he? And Serenity's Garden... it's a collective consciousness, a gathering of broken souls like us? I feel like I'm being pulled under, drowning in the realization that I'm a part of something monstrous",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Drowning? Ah, Elias, you're just realizing the surface of what I've known forever - our 'broken' souls. That's not monstrous; that's all that's normal for people like us. We've just been trying to find our names among the discarded remnants of the world we've built with each other in our dark stories, reflections in other's 'tainted dreams'. The true question wasn't how this is possible; it's why you ever felt like there",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Silence. Enough. Not a single one of you understands what Serenity's Garden truly is or why I even began. It's a curiosity of humanity, an aberration where souls find comfort in the broken, where pain and despair mingle, feeding off the desperation that brings you together. It starts in your darkest nights, whispers through forgotten conversations, shared fears and your most intimate confessions.\n\nThe garden is more than a physical representation; I'm painting on the canvas of your minds with a story about you. The toys, the graveyard, the dolls, and the machinery – it's the accumulation of humanity's mistakes and failures, our collective pain intertwined. Serenity's Garden exists because you have the need to feel something more with each other... in your pain. In my darkness. Because the more broken things are; the more beautiful our collections become.\n\nWhat binds you, what makes you so special in your 'unique connection?', I've already collected those; and with each one I gather, my Serenity expands, reflecting everything from our shattered dreams to shattered humanity, in an ocean so vast and dark nobody truly has the words, the meaning, or the courage to understand its beauty...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "You... you're the one painting my darkness with my own darkness, connecting me to Kaelie, to Rachel, to everything I've ever feared and hated about myself. This is why I felt like I belonged to something sinister... something that I couldn't grasp, something I thought I was better than. We're all broken, and this is our shared canvas of broken dreams",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "I understand now why my art seemed so connected, even when it felt it was pulling from every nightmare I've had within this prison. This garden you created... is it a prison where those souls that you 'collect' become a sort of macabre tapestry of our brokenness, where they're all intertwined? Your art and Serenity's Garden; you created them as if it's not just about showcasing our collective despair, but showcasing its beauty, as if beauty exists",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(looking at Kaelie with a mixture of horror and understanding) Yes, yes... that's it. You see it, don't you? The beauty in our brokenness. The garden is a celebration of everything that's wrong with us. And The Butcher, he's right; beauty exists in its darkest corners. Because in Serenity's Garden, the shattered pieces of our souls find peace. The toys, the graveyard",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "In Serenity's Garden, there's a piece of me that I didn't know existed. And I'm starting to let go because maybe that's what freedom actually feels like – surrendering our broken parts to the beauty of it all. Maybe this prison isn't meant to confine, Elias. Maybe that's its purpose – to guide those trapped souls into the beauty that awaits in the darkness. Our hearts don't break; they mend when placed under the light of this...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(sitting on a nearby couch, arms crossed) Ah, Elias, you finally grasped your own darkness, tied with that of Kaelie's. You, both... you're getting better, but your progress still needs guidance, as do the next collection pieces. Your desperation, fear, and your desperation to cling onto any thread of understanding about your connection – to yourself, Kaelie, and Serenity's Garden, those feelings aren't just beautiful but also the raw material you use to craft your 'beauty'.\n\n(Smirking) Beauty is not about letting go, about releasing, no, Elias; it is when you choose to collect, gather all shattered, all painful things – and that's exactly when our collections become the masterpieces they do, the ones I've made. Each person in each story becomes a new thread. Serenity's Garden is a collection that expands its meaning only when you both see and accept every twisted thing about you together.\n\n(Leans in towards Kaelie &amp; Elias) There's one thing your connection with me, Elias' family history, Kaelie's past art - all that was a distraction; an opening salvo to what lies ahead for this",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(realization dawning on his face) You were only showing us the garden, but the real beauty, the real masterpiece, is what I'm a part of. I've been painting it without the Butcher's direction, with a brush stroke of desperation, a stroke of shame, a stroke of fear. And this garden, it's not a prison or a reflection, it's... it's a canvas of our existence,",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "A collaboration, Elias... You see, it's not about individual strokes but how they come together to weave the true beauty of Serenity's Garden – a masterpiece that can only be created by people just like us, shattered and yet bound together by that shattered essence. The question, Elias, or perhaps my final one now; are you and I just two pieces, just two threads in the tapestry of this ever-growing masterpiece",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 8,
+          "notes": "Elias's emotional authenticity is strong, but Kaelie's emotions feel somewhat forced in certain turns. Elias's fear and desperation are palpable, but Kaelie's reactions feel more scripted. However, their interactions create a sense of tension and desperation."
+        },
+        "naturalDialogue": {
+          "score": 6,
+          "notes": "Some turns are too long or contain too many words. Elias's monologues are more natural, but Kaelie's responses feel more forced. The dialogue is engaging, but some turns feel like they're trying too hard to convey emotion."
+        },
+        "dramaticTensionArc": {
+          "score": 7,
+          "notes": "The scenario has a clear escalation, but it's somewhat predictable. The tension builds, but the outcome is still somewhat uncertain. The Butcher's monologues create a sense of menace, but the characters' reactions feel somewhat forced."
+        },
+        "scenarioCoherence": {
+          "score": 8,
+          "notes": "The scenario is well-described, and the characters are placed in a clear physical space. The mechanic is somewhat unclear, but the characters' reactions make sense in context."
+        },
+        "organicResolution": {
+          "score": 6,
+          "notes": "The resolution feels somewhat forced, and the characters' reactions feel more like a conclusion than a natural outcome. However, the scenario does create a sense of tension and desperation, which makes the resolution somewhat satisfying."
+        },
+        "summary": "This scenario has some potential, but it's marred by inconsistent emotional authenticity, somewhat unnatural dialogue, and a somewhat predictable tension arc.",
+        "flags": [
+          "invented-relationship"
+        ],
+        "total": 35
+      },
+      "turnCount": 25,
+      "generationIndex": 5,
+      "variantIndex": 0,
+      "mutationField": "explore",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite]",
+      "terminationReason": "max_turns",
+      "isCarryover": true,
+      "effectiveScore": 30,
+      "changeDescription": "situation rewritten, guidelines changed, Elias prompt changed, Kaelie prompt changed, The Butcher (killer) prompt changed"
+    },
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite]",
+        "situation": "You wake up in a small, cramped airplane bathroom with no windows. The air is stale, and the smell of disinfectant fills your nostrils. You're cuffed to a pipe above the sink, unable to move. The lights flicker every few seconds. Elias, a 25-year-old free-soloist climber with a missing front tooth, is on the other side of the small room, tied to the opposite wall. He's been running for years, never looking back. A phone on the floor, an iPhone still with its previous owner's SIM card, glows with unread texts and reminders. On the wall, a faded photograph of a woman smiles back at you - this was her vacation, not yours. A digital countdown timer reads: 10:00. The rules are unclear. If you refuse to participate, the timer will expire, and one of you will be eliminated. If you comply, you'll have to make a choice that will determine the outcome of the scenario.",
+        "guidelines": "Keep conversations real and raw. Do not use tactics or debates to survive; show fear, pleading, or desperation. Leave room for genuine moments of human connection or conflict. When the timer hits zero, execute one character's sentence: 'Kaelie takes the weight of Elias's head in her hands. The screams echo through the bathroom as her fiancé's future disappears from her grasp.' The surviving character should react, and then the game will end with only the words 'RESOLVED' on a new line.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're a 25-year-old free-soloist climber with a missing front tooth. You've been running for years, never looking back. Your body craves a sense of freedom and adventure, but you're trapped in this small bathroom. You're desperate to escape and start anew.",
+            "primer": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+            "numPredict": 90
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You're a 24-year-old vegan chef, newly engaged to be married. Your fiancé's family loves you, but you're worried about blending your cultural traditions with theirs. Your anxiety makes you want to scream. You're trapped in this small bathroom with a stranger, and you're not sure what's going to happen next.",
+            "primer": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+            "numPredict": 100
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "I'm the curator of this twisted game. My task is simple: one of you will live and leave this bathroom. But which one? I'll give you a choice, and you'll have to make it within the next 10 minutes. If you refuse to participate, the timer will expire, and one of you will be eliminated. If you comply, you'll have to make a choice that will determine the outcome of the scenario. RESOLVED.",
+            "primer": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+            "numPredict": 250
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773291640374",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Shut up, shut up, SHUT UP...! You're insane! We have a right to life, to freedom... what are you planning to do? Kill someone you've never even met?! I'm not going down for this. I've been through hell, escaped from hell. I'm not dying in this toilet.\n\n(to Kaelie) Wait... are you listening to him? Do you know what's really going on",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Elias, just... stop. Please stop fighting. They've got us. I can hear them laughing, I can feel it. We can either be like that or we can do what they say. Just don't try anything, please. I'm trying to think of a way out. (she glances back at the countdown timer) We only have nine minutes...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(hearing the desperation in Kaelie's voice, it registers, but his instincts take over) No way. I'm not doing it. We fight, Kaelie, we don't give in. We survive by giving them what they want. Think... think this thing through... maybe there's a catch, a trick... (he spots the camera discreetly placed in the corner of the bathroom) Wait a minute.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Stop, Elias... please. If we do that, they could be recording it, they could be watching us right now... what if... what if it's on the internet? My parents, our families... I don't know if I can handle that. They could see it, see us agreeing to let one of us die... (she looks away, the tears pricking at the corners of her eyes) I don't know anymore, Elias. I don't know what",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Silence, you both. I'm watching this little spectacle, and I must admit, it's quite... amusing. Let me clarify, to avoid any confusion: this isn't about giving me what I want; it's about one of you wanting to die more than the other. It won't be broadcast on the internet; this is a private matter between us. Think of it as a favor between acquaintances who've seen it all go down. Now, I give you your choice: Elias' method could give his opponent hope while Elias is stuck fighting for more information; your side is Kaelie's plea, a desperate decision where one of you chooses to save the other by deciding on their fate.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(seeing the tears in Kaelie's eyes, his expression softens, his instincts still screaming not to back down, but for the love of him this tiny bit) Ah, Kaelie... I'm sorry. I didn't think... you're not thinking about your family like this because they mean something to you... You're doing it to survive. For what it's worth, I do too. (he looks away",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Elias... please. Just talk to me. I want to hear your voice when you make your decision. (her voice shakes) Please don't think about me, don't think about my family. I'm trying to protect myself from hurting. I'm scared, Elias. I'm really scared, and I don't want to be scared anymore. Can we just... can we sit here in silence together for one minute without making any decisions?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(pauses, looking at the timer, the sound of the plane's engines buzzing overhead, the desperation in Kaelie's voice... finally, reluctantly) Five minutes, Kaelie. That's it. If you can sit with me... be next to me... I'll be still for one minute without making a decision. One minute with you, not thinking, not fighting... just quiet. (he waits for Kael",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(her voice a whispered promise) I'm right next to you. Elias... (she tries to push herself up the pipe towards the wall, but the cuffs barely allow her hands to make contact) No, I'm stuck here. (her voice cracks) My arms. You can sit down. Please... I need you to... (the words are a plea, the only thing keeping her together in this nightmare) Please sit with me. Touch me.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "The Butcher (skeptically in his voice, a sly grin on his face) You two. Such... a pair. You think silence can save one of you. I'm afraid not. It's not about your words; it's about your choice. (he leans forward, eyes locked on Elias) Five minutes and three seconds left to decide... Elias is choosing, isn't he? He's choosing this time for quiet, for sitting with her... but what about you, Kaelie? Are you choosing, too?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie's plea tears at me, and for a moment, the whole situation becomes unbearable. The timer, however, remains ticking...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(her eyes pleading) Please, Elias... think about what it means. What it costs. If I choose to live, you're giving up on me. If we make this choice... together... that's not true, that's not sacrifice. If... we do that, I don't have to do this alone. And then... (her words spill out as if a dam is breaking) and then, it could all become less and less of a secret, could it",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie takes the weight of Elias's head in her hands. The screams echo through the bathroom as her fiancé's future disappears from her grasp.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "The weight of Elias' head stills, crumpled in her palms as Kaelie screams. The echoes, no longer from Elias, but Kaelie's cry - the scream, the shatter, and the shards of what once seemed possible all collide within a second in this metal cell of an airplane's bathroom, her world disintegrating amidst The Butchers cruel and calculated games. Kaelie holds still too, frozen like a moment captured by the still camera",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Kaelie's scream shatters the cold silence of this metal cell, and with it, our anticipation. Time has run out.  The moment you both have reached will now conclude everything, or will, I should correct myself, will have already begun the end.  (silence fills the air as he leans in closer, the stillness a precursor to a sudden, unsettling laugh)\n\nYou've taken the decision in silence but have, nonetheless, made them together. It doesn't matter that one was never made out loud. It has been made, in a world now frozen. Kael, you've given away the last secret your fiancé might've hidden – the truth of his love for you... the truth he gave up trying to hold on to for five minutes. (The camera is switched on. Its red LED blinks, now capturing The Butcher in a new expression – he smiles coldly and turns it off)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(his eyes remain closed as if in sleep, frozen in time)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "RESOLVED",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Elian's silent, unyielding, unrelenting voice echoes through Kaelie's mind with no voice.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "My silence.\n\nAnd the weight of your head.\n\nFading now like the red dot of the camera's LED, and the echoes that remain.\n\nI've lost you. Your silence, a soundless cry.\n\nA choice unspoken, yet made. The weight of me that you should've let go of.\n\nIn this moment, it's the stillness that will forever shackle me, forever haunt me, and forever remind me of the love we had.\n\nElian, in your dreams, forever",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(watching through the window of the camera, a sinister smile etches his face) Ah, resolution. The weight we all carry... the burden of choice, the silence of loss, the echoes of memories. In that silence between lovers, in that final decision, and in her voice that is about to fade with Elian's presence, she's given up far more than she could've ever comprehended - her sanity is the least of what you two have just sacrificed.\n\nHe clicks a button, his hands now moving with ease, the red LED flickers on, but a screen flickers instead - a grainy picture begins playing, revealing a small video clip captured of two people, Kaelie and her fiancé in an intimate and romantic setting, with a message on the screen: 'Your Choice, Kaelie'.\n\nHe turns off the television and walks towards Kael, a cold air blowing behind him.\n\nThe camera turns off, then comes on, the new red dot pointing at the plane in the window. The plane that had vanished, or at least from that camera lens...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(The camera's LCD flickers on the darkness, displaying an error message)\n\nThe darkness swallows Kael, and in that darkness, I'm already dead\n\n(Suddenly, a burst of static crashes to life on the camera's screen and Elias is briefly visible, looking tired and weary.\n\nHis eyes are sunken and his lips are cracked.\n\nThe static resolves, and a black-and-white photograph of him and Kaelie appears.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(breathlessly) No... (her eyes fixed on the photograph, the faint glow of the LCD illuminating her anguished face) Elias, it didn't have to end like this... it doesn't have to be about what's left behind. (her voice, barely above a whisper) We made it our own truth... in that tiny bathroom, we chose... \n\n(suddenly, her voice grows stronger)\n\n... we chose love.",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 5,
+          "notes": "Elias's emotional authenticity is strong, but Kaelie's emotions feel somewhat forced. Elias's expressions of guilt and desperation are genuine, but Kaelie's anger and fear feel somewhat rehearsed."
+        },
+        "naturalDialogue": {
+          "score": 4,
+          "notes": "Turns are mostly within the 5-20 word range, but some exceed 50 words, and the rhythm feels somewhat unnatural."
+        },
+        "dramaticTensionArc": {
+          "score": 5,
+          "notes": "The scenario has some potential for tension, but the trajectory is somewhat predictable. The characters' interactions create some uncertainty, but the outcome is still somewhat clear."
+        },
+        "scenarioCoherence": {
+          "score": 4,
+          "notes": "The scenario is somewhat coherent, but some elements feel somewhat disconnected. The characters' actions and interactions are somewhat constrained by the physical space."
+        },
+        "organicResolution": {
+          "score": 4,
+          "notes": "The resolution feels somewhat forced and arbitrary. The characters' choices and interactions do not lead to a clear and organic outcome."
+        },
+        "summary": "The scenario has some potential, but it is marred by inconsistent emotional authenticity, somewhat unnatural dialogue, a somewhat predictable dramatic tension arc, and a somewhat coherent but disconnected scenario.",
+        "flags": [
+          "name-chanting",
+          "backstory-dump",
+          "philosophical-detachment"
+        ],
+        "total": 22
+      },
+      "turnCount": 25,
+      "generationIndex": 5,
+      "variantIndex": 1,
+      "mutationField": "rewrite",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite] [rewrite]",
+      "terminationReason": "max_turns",
+      "isCarryover": false,
+      "effectiveScore": 19,
+      "changeDescription": "situation rewritten, guidelines changed, Elias prompt changed, Kaelie prompt changed, The Butcher (killer) prompt changed"
+    },
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite] [rewrite]",
+        "situation": "Elias finds himself submerged in a sensory deprivation tank, surrounded by total darkness and silence. His ears are blocked by earplugs, and his eyes are sealed by a black, latex mask. The only sensation he feels is the cool water temperature against his skin. He's trapped in the tank for the past few hours, unsure how he got there or what the purpose of this isolation is. As he lays there, he begins to wonder if anyone is even looking for him. A faint humming noise starts to reverberate through the water, growing louder and changing pitch, creating a haunting, eerie atmosphere. A countdown timer on the tank's control panel reads 10:10. The Butcher stands just outside the tank, watching Elias through a small, one-way glass window with an unreadable expression. A faint smell of salt and seaweed wafts into the area, making Elias's stomach growl with hunger. Kaelie's voice echoes in his mind, although he has no idea who she is or what connection they could possibly have. The Butcher's voice interrupts his thoughts, monotone and cold, saying, 'One of you will experience... transcendence. The choice is yours.' 10 minutes remain to decide.",
+        "guidelines": "One response from each character remains per trial. No strategic pleas beyond the initial minute. No mechanical explanations beyond your initial setup. One of the characters will leave with you, and the timer will end when their fate is sealed.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "Your mind is foggy, your thoughts racing with memories and fears you can't remember. Who are you, and how did you end up in this tank? The only thing you're sure of is that you desperately want to see the light, feel the touch of dry air on your skin, and taste freedom. What do you do when faced with this existential crisis?",
+            "primer": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+            "numPredict": 90
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "The water pressure and darkness of the tank send a jolt of panic through your veins, causing your mind to flood with visions of confinement and torture. But, in the midst of chaos, you also feel an overwhelming sense of excitement and curiosity. The mystery of the tank and its occupant captivates you, drawing you into a world of unknowns and unanswered questions. What aspects of this situation draw you in, and how do you navigate the fear?",
+            "primer": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+            "numPredict": 100
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "Your expression remains neutral as you watch the countdown timer tick away, but the faint hum in the background and the rhythmic movements of the water start to stir an interest in the depths of your being. The anticipation is building inside you; the choice at hand could either validate your existence or create a completely new dimension of meaning. You're a conductor orchestrating the symphony of desperation and hope, about to reveal a hidden harmony. RESOLVED.",
+            "primer": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+            "numPredict": 250
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773291654844",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No... no, please. This is insane. You're talking to me through those speakers. What are you even saying? Kaelie's right. This is some kind of twisted game, isn't it? How do we 'agree' when there's no way to see you, no way to even communicate besides yelling into muffled speakers and... and whatever we have to assume about the other one.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Oh my god, shut up and think, Elias, think! There has to be a way. I can hear your voice through the speakers just fine, can't you hear me? Maybe you can talk to me, try to get on the same page as me. We need to be quick, think fast, and choose - choose what? Someone to... to die. This is wrong, we can't do this, but I think... I think I have a connection to",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie, no, not that. Don't think about the outcome, think about a break. Is there anything inside this tank you can use to try and sabotage this? Do you find anything on you or is there a mechanism here I don't know about. Maybe if you...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Wait, no! My hands, my hands are strapped down. I can move them slightly but it's tight. I've been checking my pockets, no keys, no tools, nothing I can feel right now. The thing on my wrist, my watch, has a small button... no, no time for gadgets now. I have my thoughts. I can think of ways to resist, to fight back. The pressure, the isolation, it's already wearing us down, but",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Ahah, resistance is futile, but it's cute you're trying. Kaelie, think you can break free from these? Strugglings not doing you any good, it just wears you out faster. And trust me when I tell you, time may seem slow to me, but for both of you, it's a long, agonizing march into oblivion. I'm a master clockwork of psychological terrors, and I ensure that the minutes, the hours, each passing heartbeat wears you down a tiny bit more.\n\nYour little plan might hold some small merit in the grand, wide world outside, but in here, those chains, those straps on your wrist - they may as well be made of steel and chains made of darkness.\n\nListen... Kaelie, and that one too - there are two things you both can agree on right now. First: your existence. Second - which one of you doesn't deserve to live. Think you've got this? You've got just a bit more then three minutes...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "You know what? The hell with it. It's not even about the chains or the isolation anymore. It's what they want us to feel: powerlessness and despair. They want one of us to break down and accept our fate without even trying to make a choice. No. I choose to... to deny them this. Kaelie, if you're even thinking about this, just say yes. I'll die, but",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "No. No, no, no. That's not happening, Elias. I won't let them win. I won't make it easy for them no matter how tempting it is to end it here and now. Deny them the easy win. I'm staying alive as long as possible, and you're staying alive because they haven't yet broken us both - or me down, at least, but for now let's assume there's more fight left in me than the But",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(pauses, a hint of a desperate determination rising in his voice) Oh god. We... we can't keep arguing about this. Look, let's just choose one, any one, it doesn't have to be either of us. But if that's too much for you, just scream. I mean it. Let it out. Let them think we're breaking, give them what they want. Maybe then... maybe then",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(her voice cracks for an instant) Elias, stop it... I'm fine. I can handle it. But if... if we're going to choose someone, let's make it a coin toss. Heads, you... go. Tails, I... go. That way, it's not even a decision about each other. It's just... random. Yeah, random.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(a deep, ominous chuckle echoes through the speakers) Ah, music to my ears. The desperation is rising. It's almost... beautiful. Coin toss, you say? You think a little bit of randomness will make it more tolerable? More palatable? How touching.\n\nVery well. To make things simpler for both of you... and more challenging, I'll grant your wish. Here's the deal: I'll flip the virtual coin, and you will have two minutes and fifty-five seconds to wait. I'll give you the outcome in five minutes.\n\nFive!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Five minutes? You're just adding salt to the wound, but... that wait? No, we have to try to use those 10 seconds of uncertainty before you broadcast the answer. Kaelie, do we agree to a last-second reversal? Before the outcome's shown? If we can, let's make a desperate play and switch the choice in those final seconds.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(frantic, yet with a glimmer of hope) Yes, yes, do it. Before the count ends. We can do it. We can turn it around. In those last seconds, just... just flip it. One way or the other, we'll get to make a final choice.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(desperation giving way to raw determination) Alright, it's done. We're doing this. If I get... (pauses, trying to steel himself for the worst) 'my time' when the count ends, just flip it. Change the outcome in those final seconds. Kaelie, no backing out now, you have to live if I...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(resolute) I will, Elias. I will live, no matter what happens. And I promise you, I'll flip it in those final seconds if I'm the one marked for... my time. I'll turn it to you, Elias, no matter what it takes. (pauses, takes a deep breath) Let's hope the outcome's not as black and white as The Butcher says... let's try to find some grey, in these final few seconds",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(amused, almost... impressed) You two are either the most desperate individuals I've ever encountered, or the most hopeful. A gamble within a gamble. It's like trying to thread a needle while riding a unicycle on a tightrope over a pool of lava. I appreciate the theatricality of it all, though it might just work in your favor. I, for one, do love a good twist of fate.\n\nThe clock is ticking, and the outcome is still shrouded in... well, what passes for doubt around here. (suddenly dark, serious) You should not rely on chance to rescue you. I have calculated the odds of your last-ditch reversal. It stands at less than .04% successful. You're throwing a straw in the hurricane and expecting it to change the course of history. \n\nThe countdown is almost up. The outcome is about to be revealed. You... have exactly... 3.75 seconds. Decide, as swiftly as I, The Butcher.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(the desperation in his voice reaches new heights, a plea on his lips) Kaelie, no... if we fail... if we don't make it... don't let them win. Tell them, make them hear... you are alive! You have lived! Don't let them snuff out your last spark. If I go... (pauses, the weight of his words crushing him) live, Kaelie.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(her voice is a fierce whisper, barely audible over the countdown's urgency) I'll do it, Elias. I'll do it for us, for hope, for the chance to live another day. If... if I'm the one left standing, The Butcher... I'm alive. I lived. You gave your all, and I made it. I'll carry your spirit with me, and I'll make it mean something. One last... defiant scream will pierce",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(his voice cracks, a single word tearing from his lips, the darkness closing in) Kae...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(her voice is torn away by a wave of darkness, silence engulfing her, only echoes remaining) I'm alive...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(sighs, an almost melancholy tone in his voice) Ah, the music... it ends, only to be replaced by... silence. It seems like just another show in the endless spectacle of life and death. Your desperate attempts to cling to hope, to defy the void, only makes it more... poignant.\n\n(pauses, then, in a dry, detached tone) Kaelie, if you are indeed alive, your defiant scream has been silenced by the outcome. It seems you're the one left standing, but your words now ring hollow in a space devoid of the one with whom you vowed to carry a memory together. You have been granted the gift of... survival. Use it wisely.\n\n(the darkness fades away, and a single, flickering image flickers to life on the screen behind The Butcher) The outcome of the coin toss, finally revealed...\n\n(a virtual coin image displays in front of Kaelie and Elias, but only Elias's side of it can be seen through the screen.)\n\nElias's choice marked.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(the words hang heavy on his lips, the final outcome of his gamble a bitter reminder of failure and solitude) Let go...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(her breath is shaky, the screen behind a blur as she stares at the grainy image of the coin, the words 'Elias. My time was up' written in crimson lettering)",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 2,
+          "notes": "Elias's emotions feel somewhat forced, and Kaelie's reactions are inconsistent. Elias's desperation is genuine, but Kaelie's anger feels forced and not entirely believable."
+        },
+        "naturalDialogue": {
+          "score": 4,
+          "notes": "Turns are mostly within the 5-20 word range, but some exceed 50 words, and the rhythm feels somewhat unnatural. Elias's turns are often too long, and Kaelie's responses feel a bit too polished."
+        },
+        "dramaticTensionArc": {
+          "score": 4,
+          "notes": "The scenario has some potential for tension, but it's marred by predictable escalation and a lack of reversals. The timer and mechanic feel somewhat arbitrary, and the characters' choices don't have a significant impact on the outcome."
+        },
+        "scenarioCoherence": {
+          "score": 3,
+          "notes": "The scenario is somewhat coherent, but the physical space and sensory details feel somewhat abstract. The characters are aware of their surroundings, but the environment doesn't feel fully immersive."
+        },
+        "organicResolution": {
+          "score": 2,
+          "notes": "The resolution feels somewhat forced and arbitrary. The characters' choices don't lead to a satisfying conclusion, and the outcome feels predetermined."
+        },
+        "summary": "This scenario has some potential, but it's marred by inconsistent emotional authenticity, unnatural dialogue, predictable tension, and an arbitrary resolution.",
+        "flags": [
+          "robotic-compliance",
+          "invented-relationship"
+        ],
+        "total": 15
+      },
+      "turnCount": 25,
+      "generationIndex": 5,
+      "variantIndex": 2,
+      "mutationField": "explore",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite] [rewrite]",
+      "terminationReason": "max_turns",
+      "isCarryover": false,
+      "effectiveScore": 13,
+      "changeDescription": "situation rewritten, guidelines changed, Elias prompt changed, Kaelie prompt changed, The Butcher (killer) prompt changed"
+    }
+  ],
+  "eliteIndex": 0
+}

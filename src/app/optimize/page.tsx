@@ -249,11 +249,13 @@ function VariantsView({
     });
   }, [gen.variants.length]);
   const bestScore = gen.variants.reduce((b, v) => Math.max(b, v.rating?.total ?? -1), -1);
-  // Compute winner dynamically from scores so carryovers can't displace a higher-scoring new variant
-  const winnerIdx = gen.variants.reduce(
-    (bi, v, i) => (v.rating?.total ?? -1) > (gen.variants[bi]?.rating?.total ?? -1) ? i : bi,
-    0,
-  );
+  // Compute winner dynamically from scores — only when generation is complete
+  const winnerIdx = gen.complete
+    ? gen.variants.reduce(
+        (bi, v, i) => (v.rating?.total ?? -1) > (gen.variants[bi]?.rating?.total ?? -1) ? i : bi,
+        0,
+      )
+    : -1;
 
   return (
     <div style={{ fontSize: 11 }}>
@@ -483,7 +485,7 @@ function GenerationsView({
                   {bestScore >= 0 ? `${bestScore}/50` : "—"}
                 </span>
               </div>
-              {elite?.rating && (
+              {gen.complete && elite?.rating && (
                 <div style={{ fontSize: 10, color: "#555", display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap", overflow: "hidden" }}>
                   <span style={{ color: "#886600", flexShrink: 0 }}>★</span>
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
@@ -623,6 +625,10 @@ export default function OptimizePage() {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluatorPhase, setEvaluatorPhase] = useState<string>("evaluate");
 
+  // Completed evaluator blocks — persisted so they don't vanish
+  interface EvaluatorBlock { phase: string; content: string; }
+  const [completedEvalBlocks, setCompletedEvalBlocks] = useState<EvaluatorBlock[]>([]);
+
   // Ollama model status
   const [ollamaModel, setOllamaModel] = useState<string | null>(null);
   const [ollamaRole, setOllamaRole] = useState<string | null>(null);
@@ -649,6 +655,7 @@ export default function OptimizePage() {
   const sseRef = useRef<EventSource | null>(null);
   const isDraggingDivider = useRef(false);
   const handleEventRef = useRef<((event: OptimizationEvent) => void) | null>(null);
+  const stoppingRef = useRef(false);
 
   // Elapsed timer for active model
   useEffect(() => {
@@ -819,20 +826,33 @@ export default function OptimizePage() {
 
       case "mutation_complete":
         setStatusLine(`Gen ${event.generation} Var ${(event.variant ?? 0) + 1}: mutating...`);
-        setEvaluatorTokens("");
+        // Archive current evaluator output before clearing
+        setEvaluatorTokens((prev) => {
+          if (prev.trim()) {
+            setCompletedEvalBlocks((blocks) => [...blocks, { phase: evaluatorPhase, content: prev }]);
+          }
+          return "";
+        });
         setIsEvaluating(false);
+        if (event.jobId) loadDrillDetail(event.jobId);
         break;
 
       case "run_start":
-        // Clear the live feed for each new variant run — this is the key visual separator
+        // Archive current evaluator output, then clear everything for new variant
+        setEvaluatorTokens((prev) => {
+          if (prev.trim()) {
+            setCompletedEvalBlocks((blocks) => [...blocks, { phase: evaluatorPhase, content: prev }]);
+          }
+          return "";
+        });
+        setIsEvaluating(false);
+        setCompletedEvalBlocks([]);
         setLiveVariantInfo(
           `Gen ${event.generation} — Variant ${(event.variant ?? 0) + 1}`,
         );
         setStatusLine(`Gen ${event.generation} Var ${(event.variant ?? 0) + 1}: running...`);
         setLiveTurns([]);
         setStreamingTurn(null);
-        setEvaluatorTokens("");
-        setIsEvaluating(false);
         break;
 
       case "run_complete":
@@ -861,14 +881,21 @@ export default function OptimizePage() {
         break;
 
       case "rating_complete":
+        // Archive evaluator output before clearing
+        setEvaluatorTokens((prev) => {
+          if (prev.trim()) {
+            setCompletedEvalBlocks((blocks) => [...blocks, { phase: evaluatorPhase, content: prev }]);
+          }
+          return "";
+        });
         setIsEvaluating(false);
-        setEvaluatorTokens("");
         setStatusLine(
           `Gen ${event.generation} Var ${(event.variant ?? 0) + 1}: rated ${event.rating?.total ?? "null"}/50`,
         );
         fetch(`/api/optimize/status?jobId=${event.jobId}`)
           .then((r) => r.json())
           .then((job: OptimizationJob) => {
+            if (stoppingRef.current) return; // Don't overwrite stopped status
             setPopulation(job.population ?? []);
             setJobStatus(job);
           })
@@ -883,11 +910,12 @@ export default function OptimizePage() {
         break;
 
       case "job_complete":
-        setStatusLine((prev) => prev?.startsWith("Error:") ? prev : "Job complete.");
+        stoppingRef.current = false; // Job is done, clear stopping guard
+        setStatusLine((prev) => prev?.startsWith("Error:") ? prev : (prev === "Stop requested..." ? "Stopped." : "Job complete."));
         setJobStatus((prev) => {
           if (!prev) return prev;
-          // Don't override error status — job_complete just means the orchestrator exited
-          if (prev.status === "error") return prev;
+          // Don't override error or stopped status
+          if (prev.status === "error" || prev.status === "stopped") return prev;
           return { ...prev, status: "complete" };
         });
         setOllamaModel(null);
@@ -907,7 +935,8 @@ export default function OptimizePage() {
 
       case "error":
         setStatusLine(`Error: ${event.message ?? "unknown"}`);
-        setJobStatus((prev) => (prev ? { ...prev, status: "error" } : prev));
+        // Don't set jobStatus to "error" here — error events fire for non-fatal
+        // variant failures too. The real status update comes via job_complete.
         loadJobs();
         break;
 
@@ -965,6 +994,7 @@ export default function OptimizePage() {
     }
 
     const { jobId } = await res.json();
+    stoppingRef.current = false; // Clear stopping guard for new job
     setActiveJobId(jobId);
     setJobStatus({ id: jobId, status: "running" } as OptimizationJob);
     setDrillJobId(jobId);
@@ -978,6 +1008,11 @@ export default function OptimizePage() {
 
   async function handleStop() {
     if (!activeJobId) return;
+    // Set stopping guard BEFORE the fetch — prevents SSE events from overwriting status
+    stoppingRef.current = true;
+    // Close SSE immediately so no more events can overwrite status
+    sseRef.current?.close();
+    sseRef.current = null;
     await fetch("/api/optimize/stop", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1342,10 +1377,20 @@ export default function OptimizePage() {
                     </div>
                   );
                 })()}
+                {completedEvalBlocks.map((block, bi) => (
+                  <div key={bi} style={{ padding: "6px 8px", background: "#e8e8e0", borderTop: bi === 0 && (liveTurns.length > 0 || streamingTurn) ? "2px solid #ccaa00" : "1px solid #d0d0c8" }}>
+                    <div style={{ fontSize: 10, color: "#998855", fontWeight: "bold", marginBottom: 4, letterSpacing: 0.3 }}>
+                      {block.phase === "bootstrap" ? "Bootstrap" : block.phase === "mutate" ? "Mutation" : "Evaluation"} (done)
+                    </div>
+                    <div style={{ fontFamily: "monospace", fontSize: 10, color: "#777", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+                      {block.content}
+                    </div>
+                  </div>
+                ))}
                 {isEvaluating && (
-                  <div style={{ padding: "6px 8px", background: "#f0f0e8", borderTop: (liveTurns.length > 0 || streamingTurn) ? "2px solid #ccaa00" : "none" }}>
+                  <div style={{ padding: "6px 8px", background: "#f0f0e8", borderTop: (liveTurns.length > 0 || streamingTurn || completedEvalBlocks.length > 0) ? "2px solid #ccaa00" : "none" }}>
                     <div style={{ fontSize: 10, color: "#886600", fontWeight: "bold", marginBottom: 4, letterSpacing: 0.3 }}>
-                      ⚙ {evaluatorPhase === "bootstrap" ? "Bootstrapping next variant..." : evaluatorPhase === "mutate" ? "Mutation model generating variant..." : "Judge model evaluating..."}
+                      {evaluatorPhase === "bootstrap" ? "Bootstrapping next variant..." : evaluatorPhase === "mutate" ? "Mutation model generating variant..." : "Judge model evaluating..."}
                     </div>
                     <div style={{ fontFamily: "monospace", fontSize: 10, color: "#444", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
                       {evaluatorTokens || "..."}

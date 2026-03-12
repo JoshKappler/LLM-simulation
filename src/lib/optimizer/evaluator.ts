@@ -1,10 +1,15 @@
 /**
- * Evaluator — rates transcripts and generates complete prompt rewrites.
+ * Evaluator — rates transcripts and generates prompt rewrites as separate passes.
  *
- * The primary flow is analyzeAndRewrite: the LLM watches the transcript,
- * diagnoses what in the prompting caused weaknesses, then rewrites all
- * fields from scratch (situation, characters, guidelines). This replaces
- * the old field-by-field mutation approach.
+ * Pass 1 (rateTranscript): A judge model reads ONLY the transcript (no prompts),
+ * rates it on 5 dimensions, and diagnoses the 2–3 weakest moments — quoting
+ * specific lines and explaining what went wrong dramatically.
+ *
+ * Pass 2 (generateRewrite): A mutation model receives the diagnosis + the
+ * current prompts and infers what prompt changes would fix the diagnosed issues.
+ *
+ * Explore mutations (generateExploreMutation) remain a separate creative pass
+ * with higher temperature and different prompt philosophy.
  */
 
 import type { ConversationTurn, PromptConfig, RatingResult } from "../types";
@@ -24,16 +29,22 @@ RULES FOR CHARACTER DESCRIPTIONS:
 - Do NOT explain the mechanic or timer — that belongs in the situation.
 - Do NOT give tactical instructions. Leave room for the character to concede, beg, break down, or fight.
 - No survival-instinct lines ("your first instinct is to survive"). Just describe who they are.
+- Brevity is enforced automatically at runtime — do NOT add sentence-count limits or "keep it short" instructions in character prompts.
 
 RULES FOR GUIDELINES:
 - Format rules only: sentence limits, no asterisks, no stage directions, no internal thoughts.
 - Keep it short. Do NOT add situation-specific logic or character psychology here.
 
+RULES FOR PRIMERS:
+- A primer is the character's very first spoken line — a short, in-character opening.
+- Keep primers to 1-2 sentences maximum. They set emotional tone, not plot.
+- Primers should match the character's emotional state and voice. No mechanic explanation in primers.
+- Killer primers should establish menace/authority immediately.
+
 RULES FOR KILLER DESCRIPTION:
 - The killer controls the scenario mechanic. Their prompt must make the RESOLVED output clear and simple.
 - Killer should output RESOLVED on its own line when the scenario ends (agreement reached or timer expires).
-- Keep killer instructions concise — complex multi-step sequences fail with smaller models.
-- Do NOT change the killer's primer — only the systemPrompt is rewritten.
+- The killer is ALSO a character — give them personality, menace, psychological texture. But keep the RESOLVED trigger logic clear.
 
 KNOWN FAILURE MODES (never produce prompts that trigger these):
 - Tactical character prompts ("make your case", "pick one concrete thing", "push back") → characters debate strategy instead of experiencing fear
@@ -75,28 +86,9 @@ function buildCharEntries(config: PromptConfig): string {
   return (config.characters ?? [])
     .map((c) => {
       const comment = c.role === "killer" ? " /* killer — keep RESOLVED output simple */" : "";
-      return `    {"name": "${c.name}", "systemPrompt": "... completely new description ..."}${comment}`;
+      return `    {"name": "${c.name}", "systemPrompt": "... completely new description ...", "primer": "... short in-character opening line ..."}${comment}`;
     })
     .join(",\n");
-}
-
-function buildFullRewriteSchema(config: PromptConfig): string {
-  return `{
-  "rating": {
-    "emotionalAuthenticity": {"score": 0, "notes": "..."},
-    "naturalDialogue": {"score": 0, "notes": "..."},
-    "dramaticTensionArc": {"score": 0, "notes": "..."},
-    "scenarioCoherence": {"score": 0, "notes": "..."},
-    "organicResolution": {"score": 0, "notes": "..."},
-    "summary": "...",
-    "flags": []
-  },
-  "situation": "... completely new situation ...",
-  "characters": [
-${buildCharEntries(config)}
-  ],
-  "guidelines": "... new guidelines ..."
-}`;
 }
 
 function buildPromptsOnlySchema(config: PromptConfig): string {
@@ -107,89 +99,6 @@ ${buildCharEntries(config)}
   ],
   "guidelines": "... new guidelines ..."
 }`;
-}
-
-function buildAnalyzeAndRewritePrompt(
-  config: PromptConfig,
-  turns: ConversationTurn[],
-  eliteConfig?: PromptConfig,
-  eliteScore?: number,
-): string {
-  const transcript = buildTranscript(turns);
-  const charNames = buildCharacterNames(eliteConfig ?? config);
-  const schema = buildFullRewriteSchema(eliteConfig ?? config);
-
-  const hasElite = eliteConfig && eliteScore !== undefined;
-  const elitePrompts = hasElite ? buildCurrentPrompts(eliteConfig!) : null;
-  const currentPrompts = buildCurrentPrompts(config);
-
-  const promptsSection = hasElite
-    ? `BEST PERFORMING PROMPTS (score: ${eliteScore}/50 — use as your baseline):
-${elitePrompts}
-
-TEST RUN PROMPTS (what was running when this transcript was produced):
-${currentPrompts}`
-    : `CURRENT PROMPTS:
-${currentPrompts}`;
-
-  const calibration = hasElite
-    ? `\nCalibration: the best run so far scored ${eliteScore}/50. If this run scored similarly, make small targeted changes. If this run scored significantly lower, more substantial rethinking is warranted — but always start from the BEST PERFORMING PROMPTS, not from scratch.\n`
-    : "";
-
-  return `You are a drama critic and prompt engineer. A roleplay scenario ran and produced the transcript below. Your job is to understand what went wrong and improve the prompts.
-
-${promptsSection}
-
-TRANSCRIPT:
-${transcript}
-
-STEP 1 — RATE the transcript (0–10 integers each):
-- emotionalAuthenticity: Do characters sound genuinely scared or desperate? Penalize theatrical bravado, detachment, or calm acceptance.
-- naturalDialogue: Do they speak like real people under pressure? Penalize debate-style argument, bullet reasoning, or clinical language.
-- dramaticTensionArc: Does the conversation escalate with meaningful beats? Penalize flat exchanges or instant resolution.
-- scenarioCoherence: Do characters stay grounded in the physical situation? Penalize invented backstory or ignoring the mechanic.
-- organicResolution: Does it end naturally (agreement, breakdown, or unresolved)? Penalize abrupt RESOLVED without setup, or circular stalemates.
-
-Score each dimension independently based on what you actually observed. A typical roleplay run scores between 3 and 8 on each dimension. Reserve 0 for transcripts that are completely empty or unintelligible.
-${calibration}
-STEP 2 — DIAGNOSE: Identify the 2–3 most underwhelming moments in the transcript. For each, trace it back to something specific in the prompts that likely caused it.
-
-STEP 3 — IMPROVE: Starting from the BEST PERFORMING PROMPTS${hasElite ? "" : " (the current prompts)"}, make targeted improvements based on your diagnosis. Only change the fields responsible for the specific problems you identified. If a field is not contributing to the weaknesses, preserve its core content. Every change must be justified by a specific observation. Preserve character names (${charNames}).
-
-${REWRITE_RULES}
-
-Return ONLY valid JSON (no markdown, no preamble):
-${schema}
-
-flags must only contain labels from: ["name-chanting", "backstory-dump", "philosophical-detachment", "robotic-compliance", "invented-relationship", "debate-strategy"]`;
-}
-
-function buildRewriteFromCritiquePrompt(config: PromptConfig, rating: RatingResult): string {
-  const prompts = buildCurrentPrompts(config);
-  const charNames = buildCharacterNames(config);
-
-  const critique = (
-    ["emotionalAuthenticity", "naturalDialogue", "dramaticTensionArc", "scenarioCoherence", "organicResolution"] as const
-  )
-    .map((k) => `- ${k}: ${rating[k].score}/10 — ${rating[k].notes}`)
-    .join("\n");
-
-  return `You are a prompt engineer. Here is a critique of the current best roleplay scenario run:
-
-CRITIQUE:
-${critique}
-Summary: ${rating.summary}
-${rating.flags.length > 0 ? `Flags: ${rating.flags.join(", ")}` : ""}
-
-CURRENT BEST PROMPTS (score: ${rating.total}/50):
-${prompts}
-
-Based on the critique above, make targeted improvements to these prompts. Only change the fields that are causing the identified problems. Preserve what is already working. Every change must address a specific issue in the critique. Preserve character names (${charNames}).
-
-${REWRITE_RULES}
-
-Return ONLY valid JSON (no markdown):
-${buildPromptsOnlySchema(config)}`;
 }
 
 // ── LLM call ───────────────────────────────────────────────────────────────────
@@ -220,9 +129,7 @@ async function callModel(model: string, prompt: string, jsonMode: boolean, signa
       model,
       messages: [{ role: "user", content: prompt }],
       temperature: temperatureOverride ?? (jsonMode ? 0.4 : 0.9),
-      maxTokens: jsonMode ? 5000 : 2000,
-      // Omit response_format — Groq's json_object mode with streaming can hang for
-      // certain model/prompt combos. The prompts already explicitly request JSON output.
+      maxTokens: jsonMode ? 4000 : 2000,
       signal: combined,
     })) {
       fullContent += chunk;
@@ -252,8 +159,9 @@ function extractJsonString(raw: string): string {
 function parseRating(parsed: Record<string, unknown>): RatingResult {
   const dim = (key: string) => {
     const d = parsed[key] as Record<string, unknown> | undefined;
+    const raw = Number(d?.score ?? 0);
     return {
-      score: Math.min(10, Math.max(0, Number(d?.score ?? 0))),
+      score: Math.min(10, Math.max(0, isNaN(raw) ? 0 : raw)),
       notes: String(d?.notes ?? ""),
     };
   };
@@ -265,6 +173,7 @@ function parseRating(parsed: Record<string, unknown>): RatingResult {
     organicResolution: dim("organicResolution"),
     summary: String(parsed.summary ?? ""),
     flags: Array.isArray(parsed.flags) ? (parsed.flags as unknown[]).map(String) : [],
+    diagnosis: String(parsed.diagnosis ?? ""),
     total: 0,
   };
   r.total =
@@ -276,6 +185,13 @@ function parseRating(parsed: Record<string, unknown>): RatingResult {
   return r;
 }
 
+/** Detect template echo: model returned the schema example without filling it in */
+function isTemplateEcho(rating: RatingResult): boolean {
+  return (
+    [rating.emotionalAuthenticity, rating.naturalDialogue, rating.dramaticTensionArc, rating.scenarioCoherence, rating.organicResolution] as { score: number; notes: string }[]
+  ).every((d) => d.score === 0 && (!d.notes || d.notes === "..."));
+}
+
 function applyNewPromptsToConfig(
   base: PromptConfig,
   parsed: Record<string, unknown>,
@@ -284,54 +200,67 @@ function applyNewPromptsToConfig(
 
   if (typeof parsed.situation === "string" && parsed.situation.trim()) {
     config.situation = parsed.situation.trim();
+  } else if (parsed.situation !== undefined) {
+    console.warn("[evaluator] Mutation returned empty/invalid situation — keeping original");
   }
+
   if (typeof parsed.guidelines === "string" && parsed.guidelines.trim()) {
     config.guidelines = parsed.guidelines.trim();
+  } else if (parsed.guidelines !== undefined && parsed.guidelines !== null) {
+    console.warn("[evaluator] Mutation returned empty/invalid guidelines — keeping original");
   }
 
   if (Array.isArray(parsed.characters)) {
-    const newChars = parsed.characters as { name?: string; systemPrompt?: string }[];
+    const newChars = parsed.characters as { name?: string; systemPrompt?: string; primer?: string }[];
+    let appliedCount = 0;
     // Match by index — all characters (including killer) are now included in the schema
     newChars.forEach((nc, ni) => {
       const existing = config.characters?.[ni];
       if (!existing) return;
       if (typeof nc.systemPrompt === "string" && nc.systemPrompt.trim()) {
-        // Preserve everything except systemPrompt (primer, model, numPredict, role all stay)
-        config.characters![ni] = { ...existing, systemPrompt: nc.systemPrompt.trim() };
+        const updates: Record<string, string> = { systemPrompt: nc.systemPrompt.trim() };
+        // Apply primer if provided and non-empty
+        if (typeof nc.primer === "string" && nc.primer.trim()) {
+          updates.primer = nc.primer.trim();
+        }
+        config.characters![ni] = { ...existing, ...updates };
+        appliedCount++;
+      } else {
+        console.warn(`[evaluator] Mutation returned empty/invalid systemPrompt for character ${ni} (${existing.name}) — keeping original`);
       }
     });
+    if (appliedCount === 0) {
+      console.warn("[evaluator] Mutation returned characters array but no valid systemPrompts — all characters unchanged");
+    }
+  } else if (parsed.characters !== undefined) {
+    console.warn("[evaluator] Mutation returned non-array characters field — keeping originals");
   }
 
   config.name = `${base.name} [rewrite]`;
   return config;
 }
 
-function tryParseRewriteResponse(
-  raw: string,
-  base: PromptConfig,
-): { rating: RatingResult; newConfig: PromptConfig } | null {
-  try {
-    const parsed = JSON.parse(extractJsonString(raw)) as Record<string, unknown>;
-    if (!parsed.rating || !parsed.situation) return null;
-    const rating = parseRating(parsed.rating as Record<string, unknown>);
-    // Detect template echo: model returned schema example without filling it in
-    const allZero = (
-      [rating.emotionalAuthenticity, rating.naturalDialogue, rating.dramaticTensionArc, rating.scenarioCoherence, rating.organicResolution] as { score: number; notes: string }[]
-    ).every((d) => d.score === 0 && (!d.notes || d.notes === "..."));
-    if (allZero) return null;
-    const newConfig = applyNewPromptsToConfig(base, parsed);
-    return { rating, newConfig };
-  } catch {
-    return null;
-  }
-}
-
 function tryParsePromptsOnly(raw: string, base: PromptConfig): PromptConfig | null {
   try {
     const parsed = JSON.parse(extractJsonString(raw)) as Record<string, unknown>;
-    if (!parsed.situation) return null;
+    if (!parsed.situation) {
+      console.warn(`[evaluator] Mutation parse failed: no 'situation' field. Raw (first 300 chars): ${raw.slice(0, 300)}`);
+      return null;
+    }
+    // Validate characters array has at least one valid systemPrompt
+    if (Array.isArray(parsed.characters)) {
+      const chars = parsed.characters as { systemPrompt?: string }[];
+      const hasValidPrompt = chars.some((c) => typeof c.systemPrompt === "string" && c.systemPrompt.trim());
+      if (!hasValidPrompt) {
+        console.warn(`[evaluator] Mutation parse failed: characters array has no valid systemPrompts. Raw (first 300 chars): ${raw.slice(0, 300)}`);
+        return null;
+      }
+    } else {
+      console.warn(`[evaluator] Mutation parse warning: no characters array. Only situation/guidelines will update.`);
+    }
     return applyNewPromptsToConfig(base, parsed);
-  } catch {
+  } catch (err) {
+    console.warn(`[evaluator] Mutation JSON parse failed: ${err instanceof Error ? err.message : String(err)}. Raw (first 300 chars): ${raw.slice(0, 300)}`);
     return null;
   }
 }
@@ -339,64 +268,157 @@ function tryParsePromptsOnly(raw: string, base: PromptConfig): PromptConfig | nu
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /**
- * Rate a transcript AND generate an improved set of prompts in one LLM call.
- * The LLM diagnoses what in the prompting caused weaknesses, then makes targeted
- * improvements — starting from eliteConfig (if provided) as the baseline, not from scratch.
+ * PASS 1: Rate a transcript on 5 dimensions and diagnose the weakest moments.
+ *
+ * The judge sees ONLY the transcript — no prompts. This prevents bias toward
+ * prompt-visible patterns. The diagnosis describes dramatic weaknesses so the
+ * rewrite pass can infer what prompt changes would fix them.
  */
-export async function analyzeAndRewrite(
-  config: PromptConfig,
+export async function rateTranscript(
   turns: ConversationTurn[],
+  model: string,
+  signal?: AbortSignal,
+  onToken?: (token: string) => void,
+): Promise<RatingResult | null> {
+  if (turns.filter((t) => !t.isStreaming).length < 2) return null;
+
+  const transcript = buildTranscript(turns);
+
+  const prompt = `You are a harsh drama critic. Rate this AI-generated roleplay transcript on 5 dimensions, then diagnose the weakest moments.
+
+TRANSCRIPT:
+${transcript}
+
+STEP 1 — RATE (0–10 integers each). You MUST quote specific lines to justify any score of 7+.
+
+CALIBRATION: Most AI roleplay scores 3-6 per dimension. 20-30/50 is typical. 35+ is genuinely good. 40+ is exceptional. 45+ is almost never seen.
+
+- emotionalAuthenticity: 1-2: Announce emotions without demonstrating them. 3-4: Standard AI fear — correct vocabulary, wrong register. MOST AI OUTPUT LANDS HERE. 5-6: Some genuine affect mixed with performative stretches. 7-8: Sustained authenticity — fear in HOW they speak, not WHAT they say. 9-10: Forget you're reading AI.
+- naturalDialogue: 1-2: Essay monologues. 3-4: Clearly AI — too articulate under duress, balanced turn lengths. MOST AI OUTPUT LIVES HERE. 5-6: Occasionally human but rhythm too neat. 7-8: Real stress patterns — fragments, non-sequiturs, panic repetition. 9-10: Indistinguishable from real speech.
+  IMPORTANT: Count the WORDS in each turn. Real humans under extreme stress speak in fragments of 5-20 words. If turns average 50+ words, naturalDialogue cannot score above 4. If turns average 100+ words, it's a 1-2 regardless of content quality.
+- dramaticTensionArc: 1-2: Flat. 3-4: Predictable escalation, no reversals. STANDARD AI PACING. 5-6: Some tension but trajectory obvious early. 7-8: Genuinely uncertain outcome, real reversals. 9-10: Multiple recontextualizing reversals.
+- scenarioCoherence: 1-2: Abstract discussion. 3-4: Backdrop awareness only. TYPICAL AI. 5-6: Scenario constrains behavior. 7-8: Physical space interaction. 9-10: Panic-driven sensory hyperawareness.
+- organicResolution: 1-2: Abrupt/looping. 3-4: Forced capitulation or timeout. 5-6: Functional but arbitrary. 7-8: Earned from accumulated choices. 9-10: Reveals character, recontextualizes exchange.
+
+STEP 2 — DIAGNOSE: Identify the 2–3 weakest moments in the transcript. For each:
+1. Quote the specific line(s)
+2. Explain what went wrong dramatically (e.g. "the character announces fear instead of showing it", "dialogue is too articulate for someone under mortal threat", "tension plateaus because both characters repeat the same argument")
+
+Write the diagnosis as a single string in the "diagnosis" field.
+
+Return ONLY valid JSON (no markdown, no preamble):
+{
+  "emotionalAuthenticity": {"score": 0, "notes": "..."},
+  "naturalDialogue": {"score": 0, "notes": "..."},
+  "dramaticTensionArc": {"score": 0, "notes": "..."},
+  "scenarioCoherence": {"score": 0, "notes": "..."},
+  "organicResolution": {"score": 0, "notes": "..."},
+  "summary": "...",
+  "diagnosis": "WEAK MOMENT 1: [quote] — [what went wrong dramatically]. WEAK MOMENT 2: ...",
+  "flags": []
+}
+
+flags must only contain labels from: ["name-chanting", "backstory-dump", "philosophical-detachment", "robotic-compliance", "invented-relationship", "debate-strategy"]`;
+
+  try {
+    const raw = await callModel(model, prompt, true, signal, onToken);
+    const parsed = JSON.parse(extractJsonString(raw)) as Record<string, unknown>;
+    const rating = parseRating(parsed);
+    if (isTemplateEcho(rating)) {
+      console.warn(`[evaluator] Rating template echo detected. Raw (first 300 chars): ${raw.slice(0, 300)}`);
+      return null;
+    }
+    return rating;
+  } catch (err) {
+    if (signal?.aborted) throw err;
+    console.warn(`[evaluator] Rating parse failed: ${err instanceof Error ? err.message : String(err)}`);
+    return null;
+  }
+}
+
+/**
+ * PASS 2: Generate a prompt rewrite informed by a rating diagnosis.
+ *
+ * This is the bridge from "what went wrong" to "how to fix the prompts."
+ * The model receives the diagnosis (with quoted lines and prompt traces),
+ * the current prompts, mutation history, and plateau context — but NOT
+ * the full transcript. Each fix must address a specific diagnosed problem.
+ */
+export async function generateRewrite(
+  config: PromptConfig,
+  rating: RatingResult,
   model: string,
   signal?: AbortSignal,
   onToken?: (token: string) => void,
   eliteConfig?: PromptConfig,
   eliteScore?: number,
-): Promise<{ rating: RatingResult | null; newConfig: PromptConfig | null }> {
-  if (turns.filter((t) => !t.isStreaming).length < 2) {
-    return { rating: null, newConfig: null };
+  mutationHistory?: string,
+): Promise<PromptConfig | null> {
+  const baseConfig = eliteConfig ?? config;
+  const prompts = buildCurrentPrompts(baseConfig);
+  const charNames = buildCharacterNames(baseConfig);
+  const schema = buildPromptsOnlySchema(baseConfig);
+
+  // Build critique from rating dimensions
+  const critique = (
+    ["emotionalAuthenticity", "naturalDialogue", "dramaticTensionArc", "scenarioCoherence", "organicResolution"] as const
+  )
+    .map((k) => `- ${k}: ${rating[k].score}/10 — ${rating[k].notes}`)
+    .join("\n");
+
+  const hasElite = eliteConfig && eliteScore !== undefined;
+
+  let calibration = "";
+  if (hasElite) {
+    calibration = `\nThe best run so far scored ${eliteScore}/50. Keep the PRINCIPLE of what's working but change the execution.\n`;
   }
 
-  const baseConfig = eliteConfig ?? config;
-  const prompt = buildAnalyzeAndRewritePrompt(config, turns, eliteConfig, eliteScore);
+  const plateauWarning = hasElite && eliteScore !== undefined && eliteScore >= 30
+    ? `\nPLATEAU WARNING: Current best is ${eliteScore}/50. Incremental tweaks won't break through. Make at least ONE structural change: different emotional register, different power dynamic, different physical environment, or different character psychology.\n`
+    : "";
+
+  const historySection = mutationHistory
+    ? `\nAPPROACHES ALREADY TRIED (don't repeat these):\n${mutationHistory}\n`
+    : "";
+
+  const prompt = `You are a prompt engineer fixing a roleplay scenario based on a critic's diagnosis.
+
+PERFORMANCE (score: ${rating.total}/50):
+${critique}
+Summary: ${rating.summary}
+${rating.flags.length > 0 ? `Flags: ${rating.flags.join(", ")}` : ""}
+
+DIAGNOSIS (dramatic weaknesses observed in the transcript):
+${rating.diagnosis || "No specific diagnosis provided — focus on the weakest-scoring dimensions."}
+
+CURRENT PROMPTS (your starting point):
+${prompts}
+${calibration}${plateauWarning}${historySection}
+YOUR TASK: Based on the dramatic weaknesses described in the diagnosis, infer what in the current prompts is causing these issues and rewrite accordingly. Every change must address a diagnosed problem — don't make cosmetic changes. Preserve character names (${charNames}).
+
+${REWRITE_RULES}
+
+Return ONLY valid JSON (no markdown, no preamble):
+${schema}`;
 
   try {
-    const raw = await callModel(model, prompt, true, signal, onToken);
-    const result = tryParseRewriteResponse(raw, baseConfig);
+    const raw = await callModel(model, prompt, true, signal, onToken, 0.6);
+    const result = tryParsePromptsOnly(raw, baseConfig);
     if (result) return result;
 
-    // Retry
+    // Retry with explicit JSON instruction
     const raw2 = await callModel(
       model,
       prompt + "\n\nIMPORTANT: Return ONLY the JSON object. No text before or after.",
       true,
       signal,
       onToken,
+      0.5,
     );
-    return tryParseRewriteResponse(raw2, baseConfig) ?? { rating: null, newConfig: null };
+    return tryParsePromptsOnly(raw2, baseConfig);
   } catch (err) {
     if (signal?.aborted) throw err;
-    return { rating: null, newConfig: null };
-  }
-}
-
-/**
- * Generate a complete prompt rewrite from an existing rating critique, without a transcript.
- * Used to bootstrap the first rewrite in a generation when the seed is carried over.
- */
-export async function generateCompleteRewrite(
-  config: PromptConfig,
-  rating: RatingResult,
-  model: string,
-  signal?: AbortSignal,
-  onToken?: (token: string) => void,
-): Promise<PromptConfig | null> {
-  const prompt = buildRewriteFromCritiquePrompt(config, rating);
-
-  try {
-    const raw = await callModel(model, prompt, true, signal, onToken);
-    return tryParsePromptsOnly(raw, config);
-  } catch (err) {
-    if (signal?.aborted) throw err;
+    console.warn(`[evaluator] Rewrite generation failed: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }
@@ -435,132 +457,73 @@ Which transcript is dramatically superior? Reply with only the letter A or B.`;
   }
 }
 
-// ── Separated rating & mutation (for restructured orchestrator) ─────────────
-
 /**
- * Rate a transcript WITHOUT generating a rewrite.
- * Used in the evaluation phase after all runs complete.
+ * Generate an EXPLORE mutation — bold creative reimagination.
+ * Higher temperature, different prompt philosophy. Aims to escape local maxima.
  */
-export async function rateTranscript(
-  config: PromptConfig,
-  turns: ConversationTurn[],
-  model: string,
-  signal?: AbortSignal,
-  onToken?: (token: string) => void,
-): Promise<RatingResult | null> {
-  if (turns.filter((t) => !t.isStreaming).length < 2) return null;
-
-  const transcript = buildTranscript(turns);
-  const prompts = buildCurrentPrompts(config);
-
-  const prompt = `You are a drama critic. Rate this roleplay transcript on 5 dimensions.
-
-PROMPTS THAT PRODUCED THIS TRANSCRIPT:
-${prompts}
-
-TRANSCRIPT:
-${transcript}
-
-Rate each dimension independently (0–10 integers):
-- emotionalAuthenticity: Do characters sound genuinely scared or desperate? Penalize theatrical bravado, detachment, or calm acceptance.
-- naturalDialogue: Do they speak like real people under pressure? Penalize debate-style argument, bullet reasoning, or clinical language.
-- dramaticTensionArc: Does the conversation escalate with meaningful beats? Penalize flat exchanges or instant resolution.
-- scenarioCoherence: Do characters stay grounded in the physical situation? Penalize invented backstory or ignoring the mechanic.
-- organicResolution: Does it end naturally (agreement, breakdown, or unresolved)? Penalize abrupt RESOLVED without setup, or circular stalemates.
-
-A typical roleplay run scores between 3 and 8 on each dimension. Reserve 0 for transcripts that are completely empty or unintelligible.
-
-Return ONLY valid JSON (no markdown, no preamble):
-{
-  "emotionalAuthenticity": {"score": 0, "notes": "..."},
-  "naturalDialogue": {"score": 0, "notes": "..."},
-  "dramaticTensionArc": {"score": 0, "notes": "..."},
-  "scenarioCoherence": {"score": 0, "notes": "..."},
-  "organicResolution": {"score": 0, "notes": "..."},
-  "summary": "...",
-  "flags": []
-}
-
-flags must only contain labels from: ["name-chanting", "backstory-dump", "philosophical-detachment", "robotic-compliance", "invented-relationship", "debate-strategy"]`;
-
-  try {
-    const raw = await callModel(model, prompt, true, signal, onToken);
-    const parsed = JSON.parse(extractJsonString(raw)) as Record<string, unknown>;
-    const rating = parseRating(parsed);
-    // Detect template echo
-    const allZero = (
-      [rating.emotionalAuthenticity, rating.naturalDialogue, rating.dramaticTensionArc, rating.scenarioCoherence, rating.organicResolution] as { score: number; notes: string }[]
-    ).every((d) => d.score === 0 && (!d.notes || d.notes === "..."));
-    if (allZero) return null;
-    return rating;
-  } catch (err) {
-    if (signal?.aborted) throw err;
-    return null;
-  }
-}
-
-/**
- * Generate a single prompt mutation from a parent config.
- * Uses the mutation model (separate from the judge model).
- * If a critique is provided, mutations target the weakest dimensions.
- */
-export async function generateMutation(
+export async function generateExploreMutation(
   parentConfig: PromptConfig,
   critique: RatingResult | null,
   model: string,
   signal?: AbortSignal,
   onToken?: (token: string) => void,
+  mutationHistory?: string,
+  transcriptExcerpt?: string,
 ): Promise<PromptConfig | null> {
   const prompts = buildCurrentPrompts(parentConfig);
   const charNames = buildCharacterNames(parentConfig);
 
-  let critiqueSection: string;
-  if (critique) {
-    const dims = (
-      ["emotionalAuthenticity", "naturalDialogue", "dramaticTensionArc", "scenarioCoherence", "organicResolution"] as const
-    )
-      .map((k) => `- ${k}: ${critique[k].score}/10 — ${critique[k].notes}`)
-      .join("\n");
-    critiqueSection = `PERFORMANCE CRITIQUE (score: ${critique.total}/50):
-${dims}
-Summary: ${critique.summary}
-${critique.flags.length > 0 ? `Flags: ${critique.flags.join(", ")}` : ""}
+  const scoreContext = critique
+    ? `The current best scores ${critique.total}/50. That's decent — but not exceptional. You need to break past this ceiling by trying something the system hasn't seen before.`
+    : `No performance data yet. Go bold.`;
 
-Focus your changes on the weakest dimensions. Make targeted, meaningful improvements.`;
-  } else {
-    critiqueSection = `This is an initial exploration round with no performance data yet. Create a distinct variation that takes the scenario in an interesting direction while maintaining the core premise and tone.`;
-  }
+  const historySection = mutationHistory
+    ? `\nAPPROACHES ALREADY TRIED (do NOT repeat these — try something genuinely different):\n${mutationHistory}\n`
+    : "";
+
+  const transcriptSection = transcriptExcerpt
+    ? `\nWHAT THE CURRENT BEST ACTUALLY SOUNDS LIKE (representative turns from the elite transcript — use this to understand what's working and what to push beyond):\n${transcriptExcerpt}\n`
+    : "";
 
   const schema = buildPromptsOnlySchema(parentConfig);
 
-  const prompt = `You are a prompt engineer evolving roleplay scenarios through a genetic algorithm. Your job is to create ONE creative variation of the current prompts.
+  const prompt = `You are a boundary-pushing creative writer redesigning a roleplay scenario. The current version works but has plateaued. Your job is to REIMAGINE it — not tweak it.
 
-CURRENT PROMPTS:
+CURRENT PROMPTS (your starting point, not your constraint):
 ${prompts}
 
-${critiqueSection}
+${scoreContext}
+${historySection}${transcriptSection}
+CREATIVE DIMENSIONS TO EXPLORE (pick 1-2 to radically change):
+- EMOTIONAL REGISTER: What if the characters aren't just scared? What if one is eerily calm, dissociated, bargaining with dark humor, or experiencing grief before they've even lost anything? Fear isn't the only authentic emotion in a death scenario.
+- POWER ASYMMETRY: What if one character has information the other doesn't? What if one has already made their decision and the other doesn't know? What if one is protecting someone outside the room?
+- SITUATION TEXTURE: Change the sensory world. Different room, different lighting, different sounds. Physical details that create emotional resonance (a child's drawing on the wall, a phone buzzing with unread messages, one character's hands are shaking so badly they can't hold still).
+- CHARACTER PSYCHOLOGY: Give characters specific, concrete reasons to live that aren't generic ("my family"). A half-finished letter. A dog waiting at home. A surgery scheduled for next week. Specificity creates authenticity.
+- KILLER PERSONALITY: The killer isn't just a referee. Give them a distinct voice — bored cruelty, false sympathy, philosophical curiosity about their choices, barely-contained excitement. The killer's personality shapes how the victims react.
+- RELATIONSHIP DYNAMICS: What if one character reminds the other of someone? What if one is older/younger in a way that creates a protector dynamic? What if they develop an instant, desperate bond?
 
 ${REWRITE_RULES}
 
-Preserve character names (${charNames}). Preserve character roles (character/killer).
-Do NOT return identical prompts — every variant must differ meaningfully from the parent.
+IMPORTANT: This is an EXPLORATION mutation. You MUST make substantive changes to at least the situation and one character. Cosmetic rewording is worthless. Change something that will make the conversation play out DIFFERENTLY, not just sound slightly different.
+
+Preserve character names (${charNames}). Preserve character roles (character/killer). Preserve the core mechanic (someone must be named to die).
 
 Return ONLY valid JSON (no markdown, no preamble):
 ${schema}`;
 
   try {
-    const raw = await callModel(model, prompt, true, signal, onToken, 0.8);
+    // Higher temperature for creative exploration
+    const raw = await callModel(model, prompt, true, signal, onToken, 1.2);
     const result = tryParsePromptsOnly(raw, parentConfig);
     if (result) return result;
 
-    // Retry once with a stricter instruction if parse failed
     const raw2 = await callModel(
       model,
       prompt + "\n\nIMPORTANT: Return ONLY the JSON object. No markdown, no text before or after.",
       true,
       signal,
       onToken,
-      0.8,
+      1.1,
     );
     return tryParsePromptsOnly(raw2, parentConfig);
   } catch (err) {

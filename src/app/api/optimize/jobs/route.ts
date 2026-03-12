@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { readdir, readFile, writeFile, stat } from "fs/promises";
 import path from "path";
 import type { OptimizationJob, JobSummary } from "@/lib/types";
+import { isJobRegistered } from "@/lib/optimizer/jobRegistry";
 
 export const runtime = "nodejs";
 
 const OPT_DIR = path.join(process.cwd(), "optimization");
-const STALE_MS = 6 * 60 * 60 * 1000; // 6 hours
+const STALE_MS = 30 * 60 * 1000; // 30 minutes (secondary safety net)
 
 export async function GET() {
   try {
@@ -21,12 +22,20 @@ export async function GET() {
 
         // Detect stale "running" jobs (process died without updating status)
         if (job.status === "running") {
-          const { mtimeMs } = await stat(statePath);
-          if (Date.now() - mtimeMs > STALE_MS) {
+          if (!isJobRegistered(job.id)) {
+            // No AbortController in memory = server restarted
             job.status = "error";
-            job.lastError = "Process terminated unexpectedly";
-            job.completedAt = new Date(mtimeMs).toISOString();
+            job.lastError = "Process terminated unexpectedly (server restart)";
+            job.completedAt = new Date().toISOString();
             await writeFile(statePath, JSON.stringify(job, null, 2));
+          } else {
+            const { mtimeMs } = await stat(statePath);
+            if (Date.now() - mtimeMs > STALE_MS) {
+              job.status = "error";
+              job.lastError = "Process terminated unexpectedly";
+              job.completedAt = new Date(mtimeMs).toISOString();
+              await writeFile(statePath, JSON.stringify(job, null, 2));
+            }
           }
         }
 

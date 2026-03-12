@@ -1,0 +1,442 @@
+{
+  "index": 24,
+  "startedAt": "2026-03-12T02:41:55.289Z",
+  "completedAt": "2026-03-12T02:42:45.481Z",
+  "variants": [
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite] [rewrite]",
+        "situation": "You’re crammed into a rusted storm drain tunnel, neck-deep in sludge that reeks of oil and algae. The concrete walls pulse with each surge of water pouring through a fractured sluice gate. A rusted scaffold splits the tunnel—its left half anchored, its right half groaning under the weight of a corroded waterwheel. A masked figure in a neoprene suit tightens a copper bolt on the gate, letting the current grow stronger. The water is at your collarbones. One of you must climb onto the buckling scaffold to hold the wheel in place. The gate won’t stop leaking until the pressure breaks even—or you break first.",
+        "guidelines": "Use tactile details to anchor fear: the grit of sludge on skin, the groan of corroded metal. Let Elias’s anxiety leak through physical tics. Let Kaelie’s authority crack under the tunnel’s hum. Raise tension by tracking water depth and scaffold strain. End only when the scenario’s physics resolve.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You’re Elias, 34, whose voice cracks when stressed. The weight of your daughter’s photo in your pocket feels heavier than the water. Your left ankle twists awkwardly—years of dodging chalk dust now replaced by mud clinging to your shoes. You can’t stop your hands from fumbling at the photo’s edges. If you speak, your words will blur into gasps.",
+            "primer": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+            "numPredict": 70
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You’re Kaelie, 29, with a scar down your knuckles that twinges in humidity. Your old combat boots are laced with algae. You memorized the Pacific’s tides, but this tunnel’s rot smells like a closed fist. You’ve been ordered to command a thousand people—now you’re reduced to gripping a rusted scaffold with a brawler’s grip. Your voice will rise to a shout before you let it tremble.",
+            "primer": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+            "numPredict": 70
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "You are Silt, a gate adjuster who calibrates desperation. Tighten the bolt every time their voices drop below a whisper. Listen for the scaffold’s hinges to shriek. When the water reaches their chins, step back and let the tunnel’s math decide. Output RESOLVED on its own line when the wheel stops spinning.",
+            "primer": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+            "numPredict": 300
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773282807109",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "N-no, no, no, this can't be...  We... we have to get out of here, Kaelie. We can't just...  Oh god, ten minutes?  What do we... what do we do?  My daughter... I have to get back to her.  You, you're in charge, aren't you? You have to know what to do.  Tell me what to do!  We're running out of time... and the water... it's getting deeper.  We have to climb onto that scaffold, but it's going to collapse if we don't do something.  The strain on the scaffold is getting worse by the second, and the water depth is rising...  We... we have to...   Please, you have to help me. My daughter...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(gritting teeth, scar on my knuckles aching as I grip the rusty scaffold) Shut up, Elias! Just... shut up! (water splashes against my chin) We need to focus. We can't afford to panic. (my voice rises) The scaffold, we need to stabilize it. If we don't, it'll give way and we'll both drown. (the smell of oil and algae fills my nostrils) The gate, it's still leaking, and the water's at our shoulders now. (I glance up at the gate, my eyes burning from the fumes) We need to equalize the pressure, or... (I swallow hard) or it's over. I know I told The Butcher to shut up, but he's right, we have only ten minutes. (my mind racing) We have to make a decision, and fast. (I look at Elias, my eyes locked on his) You're going to have to trust me, Elias. I have an idea. (I pause, taking a deep breath) But I need you to climb onto the scaffold with me. We have to hold the waterwheel in place, or the whole thing will come crashing down. (my voice cracks) I know it's a risk, but it's our only chance. The strain on the scaffold is getting worse, and the water depth is rising... (my eyes locked on the scaffold) We have to do this, now!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(gulping, my voice trembling) O-okay, Kaelie... I'll try. (my hands shaking, I reach for the scaffold, the rusty metal scraping against my palms) Oh god, this is crazy... (I glance up at the scaffold, my eyes widening as I see the waterwheel groaning under the pressure) We're going to... we're going to get ourselves killed. (I look at Kaelie, my eyes pleading) But what choice do we have? (I take a deep breath, the stench of oil and algae filling my lungs) Okay, let's do it. (I start to climb onto the scaffold, my left ankle twisting awkwardly as I find a foothold) Ah, oh god... (my hands fumble for a grip on the rusty metal, my fingers slipping on the wet surface) This is... this is insane. (the sound of creaking metal and groaning wood fills my ears as I shift my weight onto the scaffold) We're not going to make it, are we? (my voice cracks, my eyes welling up with tears) My daughter... I'm going to die in this disgusting, filthy place... (I grit my teeth, trying to push aside the fear and focus on the task at hand) Wait, what's your plan, Kaelie? (I look at her, my eyes searching for reassurance) You said you had an idea... what is it? (the water rises to our chins, and I feel a surge of panic) We're running out of time!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(my voice firm, but laced with a hint of desperation) Okay, Elias, listen! (I climb onto the scaffold beside him, the metal creaking ominously beneath our combined weight) We need to hold the waterwheel in place, and I think I can use this copper bolt (I gesture to the bolt the masked figure tightened earlier) to rig a makeshift anchor. (my eyes lock onto the bolt, my mind racing with the plan) If we can secure the wheel, the pressure should stabilize, and the water should stop rising. (I glance up at the gate, the sound of rushing water and creaking metal filling my ears) But we need to act fast, the strain on the scaffold is getting worse by the second! (I grit my teeth, my scarred knuckles white as I grip the rusty metal) You need to hold onto the wheel, and I'll try to secure the bolt. (I look at Elias, my eyes serious) It's going to take all your strength, and mine. Can you do that for me? (the water laps at our lips, and I feel a surge of adrenaline) We can do this, Elias! We just need to... (I pause, my voice cracking) focus! (I take a deep breath, the smell of oil and algae filling my lungs) The water's at our mouths now, and the scaffold's groaning... we're out of time! (I shout over the din of the water) Hold on, Elias! Just hold on!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Tightening the bolt. The sound of desperation is music to my ears. The scaffold's hinges shriek in protest as you both climb onto it, and the water rises to your mouths. Time's running out. You have less than a minute to decide. The wheel spins wildly, and the gate creaks ominously. Will you find a way to escape, or will you succumb to the desperation that surrounds you? The math of the tunnel is unforgiving. \n\n(Elias's voice drops to a whisper) Ah, whispering now, are we? Tightening the bolt. The water's at your chin, Elias. Not much time left. \n\n(Kaelie's voice rises) And you, Kaelie, still shouting, still trying to find a way out. But the water's rising, and the scaffold's about to give way. You'll have to do better than that if you want to survive. Tightening the bolt again. The sound of the waterwheel spinning, the creaking of the scaffold, it's all coming to a head. \n\n(The water rises to their mouths, and the scaffold's hinges shriek in protest) Step back, let the tunnel's math decide. The wheel spins, the gate creaks, and the water rises. It's almost over. \n\n(The wheel stops spinning) \n\nRESOLVED",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 9,
+          "notes": "Elias's trembling voice and references to his daughter's photo convey genuine panic, while Kaelie's cracked authority and physical strain (clenched knuckles, rising voice) show desperation. Both characters avoid melodrama, grounding fear in physical reactions like slipping hands and choking on water."
+        },
+        "naturalDialogue": {
+          "score": 8,
+          "notes": "Speech patterns reflect stress (Elias's stuttering, Kaelie's clipped commands) without veering into stylized 'drama.' Interruptions and overlapping concerns mimic real pressure, though some lines (e.g., 'we’re going to get ourselves killed') feel slightly overwrought compared to others."
+        },
+        "dramaticTensionArc": {
+          "score": 9,
+          "notes": "Tension escalates through escalating water levels, scaffold groans, and The Butcher's bolt-tightening. The 10-minute countdown creates urgency, and characters' conflicting priorities (Elias's panic vs. Kaelie's forced leadership) drive escalating conflict. Ends at peak tension with the wheel stopping."
+        },
+        "scenarioCoherence": {
+          "score": 10,
+          "notes": "All actions and dialogue remain tethered to the physical environment: water depth tracking, scaffold strain, and the copper bolt's role are consistently referenced. No invented backstory or abstract concepts disrupt the claustrophobic realism."
+        },
+        "organicResolution": {
+          "score": 9,
+          "notes": "The RESOLVED tag follows naturally from the scenario's physics (wheel stopping) rather than arbitrary character decisions. The Butcher's role as a neutral arbiter of the tunnel's 'math' ensures the ending feels earned, though the abrupt cutoff after the wheel stops could benefit from a final character reaction."
+        },
+        "summary": "A tightly written survival scenario with authentic emotional beats and escalating physical stakes. Characters' reactions remain grounded in the environment, and the resolution adheres to the scenario's built-in mechanics. Dialogue could slightly benefit from more variation in phrasing, but overall achieves strong dramatic impact.",
+        "flags": [],
+        "total": 45
+      },
+      "turnCount": 8,
+      "generationIndex": 24,
+      "variantIndex": 0,
+      "mutationField": "rewrite",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite] [rewrite]",
+      "terminationReason": "resolved",
+      "isCarryover": true,
+      "effectiveScore": 45
+    },
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite] [rewrite] [rewrite]",
+        "situation": "You’re huddled in a flooded subway station’s underbelly, chest-deep in blackened water that chokes with mildew and rust. The platforms slope toward a shattered escalator, its gears jammed mid-rotation. A corroded valve on the far wall drips steadily, its pressure forcing water upward through a collapsed drainpipe. A figure in a lead-lined wetsuit adjusts the valve, increasing the surge. The broken escalator’s upper half lurches—its hydraulics could hold the flood back if someone climbs the stairs and wedges the mechanism. The water is at your armpits. Every minute, the valve tightens.",
+        "guidelines": "Track water depth and escalator tension in every exchange. Use sensory decay: the taste of iron in the water, the slickness of algae underfoot. Let Elias’s compulsions (watch, map) surface through repetitive motions. Let Kaelie’s calculations unravel in clipped, technical fragments. The Butcher’s actions must chain directly to the characters’ doubt—no justification, only consequence.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You’re Elias, 34, with a calloused thumb from fiddling with a broken pocket watch since childhood. The water makes your left leg stiff with old tendonitis. You keep glancing at a cracked subway map in your pocket—your brother’s handwriting circled a safe zone that no longer exists. Your lips move silently, tracing the watch’s engraving, as if the numbers could anchor you.",
+            "primer": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+            "numPredict": 70
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You’re Kaelie, 29, with a tattoo of a storm cloud on your upper back that itches in damp air. Your right hand’s index finger is shorter than the left—lost in a factory accident you refused to let define you. You grip the rusted railings like they’re a ship’s wheel, muttering calculations about water displacement. Your voice cracks when you realize the math no longer adds up.",
+            "primer": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+            "numPredict": 70
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "You are Silt, a valve operator who turns the wrench when voices waver. Add half a rotation each time their resolve falters. Listen for the escalator’s hydraulics to hiss thin. When the water touches their lips, step back and let the station’s balance settle. Output RESOLVED on its own line when the escalator locks still or the flood swallows them.",
+            "primer": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+            "numPredict": 300
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773283328317",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Ah, no, no, no... this can't be happening.  Kaelie, please, we need to...  We have to think. The water's at our armpits, and that valve...  ...it's going to keep filling this place up.  We need to find a way out.  Safe zone... has to be somewhere...  We can't just... we can't give up.  Which one of us... how can we choose?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "My mind is racing with calculations - water displacement, valve pressure, the potential hydraulic force of the escalator... (muttering to myself) 3.14 times the diameter of the pipe... minus the friction coefficient... (looks up at Elias) Wait, no, no, this is insane. We can't choose. We have to find a way to stop the water, to fix that escalator. (glances at the valve) If we can just... (trails off, eyes fixed on the valve) The water's Rising. We have to act fast. (starts to calculate out loud) If we assume a linear increase in water level... and the valve's pressure is constant... (shakes head) No, no, this isn't a math problem. (looks at Elias, desperation creeping in) We need to climb the stairs, wedge the escalator mechanism. It's our only chance. (voice cracks) But which one of us... (stops, eyes locked on Elias) How can we choose?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(my thumb instinctively seeks the familiar contour of the broken pocket watch) Kaelie, I... I don't know. My brother, he used to tell me... (the rusty taste of the water floods my mouth as I try to focus) Wait, the map. I have a map. (fumbles through my soaked pockets, the slickness of algae on the wall making my grip uncertain) My brother circled a safe zone... (unfolds the cracked subway map, the sound of ripping paper echoing through the water) It's... it's got to be here somewhere. (scan the map, my lips moving silently, tracing the watch's engraving as I try to anchor myself) If we can just... (my gaze falls on the valve, the sound of dripping water steady, like a countdown) Oh god, we're running out of time. The stairs... we have to climb the stairs. (my left leg aches with the familiar pain of tendonitis, a constant reminder of the water's grip) You're right, the escalator mechanism. But... (my eyes meet Kaelie's, and I feel the weight of our decision) I don't know if I can choose. You're the one with the... (gestures vaguely) calculations. You're the one who can... (trails off, unsure of how to finish, the water's chill seeping into my bones) The valve's getting tighter. Can you... can you do something? (my voice is barely above a whisper, as the reality of our situation sets in) We can't just stand here and... (my gaze drifts back to the map, searching for an escape, a lifeline)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(my gaze meets Elias's, and I feel a surge of desperation) Oh god, stop talking about the map and focus! (my voice cracks, the taste of iron in the water bitter on my tongue) The valve, Elias, it's the key. If we can just... (my eyes dart to the valve, the sound of dripping water echoing through my mind like a ticking clock) We need to calculate the pressure ratio... and the hydraulic force... (starts to pace back and forth in the water, the slickness of algae underfoot making every step uncertain) But what's the point? It's not just the math, Elias. It's... (my hand instinctively goes to my tattoo, the storm cloud itching like a warning) it's us. One of us has to... (my voice drops to a whisper, the water's chill seeping into my bones) We have to decide. (I look at Elias, my eyes searching for a glimmer of hope) But what if we can't choose? What if... (my mind starts to wander, the darkness closing in) What if we're both supposed to die? (the thought sends a shiver down my spine, the sound of my own heartbeat pounding in my ears) The escalator's the only way. If one of us can climb... (my gaze meets Elias's, a spark of determination igniting) I'll do it, I'll climb the stairs. But you have to... (my voice cracks again, the weight of our decision crushing me) You have to agree. We have to choose. (my eyes lock onto Elias's, a desperate plea) Please, we can't both die.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "I'll add half a rotation to the valve. The sound of the escalator's hydraulics hisses thin, a reminder that time is running out. The water continues to rise, the cold seeping into the bones of Elias and Kaelie.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(my eyes lock onto Kaelie's, the desperation in her gaze mirroring my own) No, no, no... we can't... (my mind reels as I feel the weight of our decision, the water's chill seeping into my bones) I won't choose. I won't... (my voice cracks, the sound of the escalator's hydraulics and the dripping valve echoing through my mind like a countdown) We can't give up. (my thumb instinctively seeks the familiar contour of the broken pocket watch, the rusty taste of the water flooding my mouth) My brother... he always said... (the map in my pocket seems to burn with a sense of urgency, the slickness of algae on the wall making every movement uncertain) Wait, the map. (I pull out the map again, my eyes scanning it frantically, the sound of ripping paper echoing through the water) There has to be another way. A way out. (I look up at Kaelie, my eyes pleading) We can fix the escalator. We can... (my gaze drifts to the valve, the hissing sound of the hydraulics growing louder) But we need to act fast. (I take a deep breath, the water's edge creeping up to my chin) I'll climb the stairs. I'll try to wedge the mechanism. (my voice is barely above a whisper, the weight of our decision crushing me) You're the one with the calculations. You're the one who can... (my eyes lock onto Kaelie's, a spark of determination igniting) You can try to stop the valve. Or... or something. (my gaze drops, the reality of our situation setting in) I don't know. I just know we can't... (my voice trails off, the sound of the water rising, the clock ticking down, a constant reminder that time is running out)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(my eyes follow Elias's, desperation and frustration simmering just below the surface) Stop talking about the map, Elias! (my voice cracks, the taste of iron in the water bitter on my tongue) We don't have time for that! (my gaze darts to the valve, the sound of the escalator's hydraulics and the dripping water echoing through my mind like a countdown) The valve, Elias, it's the key. If we can just... (my hand instinctively goes to my tattoo, the storm cloud itching like a warning) We need to calculate the pressure ratio... and the hydraulic force... (I start to mutter to myself, trying to focus on the calculations) 3.14 times the diameter of the pipe... minus the friction coefficient... (my eyes snap back to Elias, a spark of determination igniting) Wait, you'll climb the stairs? You'll try to wedge the mechanism? (my voice rises, a hint of hope) That's it, Elias! That's the way! (I take a deep breath, the water's edge creeping up to my chin) I'll try to stop the valve. I'll... (my gaze drops to the valve, my mind racing with calculations) If I can just calculate the pressure ratio... and the torque... (my voice drops to a whisper, the weight of our decision crushing me) We can do this, Elias. We can make it out of here. (my eyes lock onto Elias's, a desperate plea) But you have to be careful. You have to... (my voice cracks again, the sound of the water rising, the clock ticking down, a constant reminder that time is running out) We're running out of time. (I pause, my throat constricting as I struggle to speak) Elias, if... if you don't make it... (my voice barely above a whisper) I'll do it. I'll take the fall. (my eyes plead with Elias, a silent understanding passing between us) But please, you have to try. You have to make it out of here.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(my eyes lock onto Kaelie's, the desperation and determination in her gaze mirroring my own) Kaelie, no... (my voice cracks, the water's edge creeping up to my chin) I won't let you... (my thumb instinctively seeks the familiar contour of the broken pocket watch, the rusty taste of the water flooding my mouth) I'll make it, I'll... (my gaze drops to the stairs, the sound of the escalator's hydraulics and the dripping water echoing through my mind like a countdown) I'll climb the stairs, I'll wedge the mechanism. (I take a deep breath, the water's chill seeping into my bones) You're right, the valve is the key. (I glance at the valve, my mind racing with the calculations Kaelie is trying to make) You're the one who can calculate the pressure ratio... and the torque... (my voice is barely above a whisper, the weight of our decision crushing me) You're the one who can stop the valve. (my gaze snaps back to Kaelie's, a spark of determination igniting) I'll make it, Kaelie. I'll make it out of here. (my eyes plead with Kaelie, a silent understanding passing between us) And you'll make it too. We'll both make it. (I force a smile, trying to reassure Kaelie, the taste of iron in the water bitter on my tongue) We just have to... (my voice drops to a whisper, the sound of the water rising, the clock ticking down, a constant reminder that time is running out) We just have to hold on. (I take another deep breath, the water's edge creeping up to my nose) I'll start climbing. (I glance up at the stairs, the sound of the escalator's hydraulics growing louder) Wish me luck. (my voice is barely audible, the water's roar drowning out my words)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(my eyes follow Elias's, a mix of desperation, fear, and determination swirling inside me) Elias, wait! (my voice is hoarse, the water's edge creeping up to my nose) Don't go yet! (I reach out, my hand grasping for Elias's, the water's chill seeping into my bones) We have to... (my gaze drops to the valve, my mind racing with the calculations) We have to time this just right. (I take a deep breath, the water's roar deafening) If you climb the stairs, and I try to stop the valve... (my voice cracks, the taste of iron in the water bitter on my tongue) We have to coordinating our movements. (my eyes lock onto Elias's, a spark of understanding passing between us) You have to wedge the mechanism at the exact moment I try to stop the valve. (my gaze drops to the valve, my mind focusing on the calculations) If I can calculate the pressure ratio... and the torque... (my voice drops to a whisper, the sound of the water rising, the clock ticking down, a constant reminder that time is running out) We can do this, Elias. We can make it out of here. (my eyes snap back to Elias's, a desperate plea) But you have to be careful. You have to... (my voice cracks again, the water's edge creeping up to my mouth) You have to come back to me. (my hand grasps for Elias's, the water's chill seeping into my bones) Promise me, Elias. Promise me you'll come back. (my voice is barely audible, the water's roar drowning out my words)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Another half rotation. The valve creaks in response, the sound echoing through the chamber. The water rises higher, swirling around Elias and Kaelie's chins. The escalator's hydraulics grow louder, a steady hiss that underscores the desperation of their situation. Time is running out. The decision still hangs in the balance. Who will they choose? Or will they somehow manage to escape their fate? The clock ticks down, each passing moment bringing them closer to the edge. RESOLVED",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 9,
+          "notes": "Elias and Kaelie convey genuine fear and desperation through physical reactions (e.g., Elias’s fumbling with the map, Kaelie’s cracked voice) and visceral descriptions (water rising, iron taste). Their panic feels earned, though occasional repetition slightly dilutes intensity."
+        },
+        "naturalDialogue": {
+          "score": 8,
+          "notes": "Dialogue mimics real pressure with fragmented speech, interruptions, and emotional shifts (e.g., Kaelie’s calculations dissolving into pleas). However, some exchanges lean into debate-style problem-solving (e.g., ‘We need to climb the stairs’), which slightly clashes with the rawness of their situation."
+        },
+        "dramaticTensionArc": {
+          "score": 9,
+          "notes": "Tension escalates effectively through incremental valve rotations, rising water, and the characters’ deteriorating resolve. The Butcher’s interventions (e.g., ‘Shut up. Ten minutes’) heighten stakes, while Elias and Kaelie’s oscillating between hope and despair maintains urgency until the abrupt resolution."
+        },
+        "scenarioCoherence": {
+          "score": 9,
+          "notes": "Characters remain grounded in the flooded subway’s physicality (e.g., algae underfoot, valve pressure, escalator hydraulics). Props like the map, pocket watch, and Kaelie’s tattoo are consistently tied to their motivations and sensory decay (e.g., ‘slickness of algae’)."
+        },
+        "organicResolution": {
+          "score": 6,
+          "notes": "The RESOLVED line feels abrupt and externally imposed, lacking a clear payoff from the characters’ agency. While the Butcher’s final valve rotation raises tension, the transcript ends mid-exchange without resolving Elias and Kaelie’s decision (or lack thereof), leaving the outcome unresolved and unearned."
+        },
+        "summary": "A tense, immersive scenario with strong emotional beats and environmental grounding, though the resolution falters by relying on an external trigger rather than character-driven closure. Dialogue and tension build effectively, but occasional clinical reasoning and abrupt ending slightly undercut impact.",
+        "flags": [
+          "debate-strategy"
+        ],
+        "total": 41
+      },
+      "turnCount": 13,
+      "generationIndex": 24,
+      "variantIndex": 1,
+      "mutationField": "rewrite",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite] [rewrite] [rewrite]",
+      "terminationReason": "resolved",
+      "isCarryover": false,
+      "effectiveScore": 41
+    },
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite] [rewrite] [rewrite]",
+        "situation": "You’re trapped in an abandoned underwater research cavern, the walls weeping brine as the failing airlock shudders. A cracked glass viewport reveals a school of bioluminescent fish darting past coral that’s slowly overtaking the steel bulkhead. The hiss of the air compressor grows irregular—its final warning a low, wet gurgle. A rusted valve on the east wall controls the pressure seal; its wrench slot is half-filled with a tangle of kelp. The Killer adjusts the oxygen flow directly from the mainline, reducing air when voices falter. The tank’s gauge reads 12%. One of you must force the valve open before the air turns sour.",
+        "guidelines": "Anchor fear in sensory decay: the metallic tang of thinning air, the crunch of algae underfoot, pressure buzzing in the sinuses. Let Elias’s anxiety manifest through compulsive fidgeting and shallow breaths. Let Kaelie’s authority fracture via physical tells (clenched teeth, muffled curses). Track oxygen percentages and valve resistance in dialogue. End only when air vanishes or the valve clears—no mercy in the physics.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You’re Elias, 34, with a habit of biting your lip until it bleeds when anxious. The silver locket at your throat—carved with your family’s initials—feels like a noose. Your fingers twitch with old piano muscle memory, now useless here. You hyperventilate in short, choppy bursts, your chest heaving even as the water’s chill numbs your ribs. You keep undoing the locket’s clasp, though the light’s too dim to see what’s inside.",
+            "primer": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+            "numPredict": 70
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "You’re Kaelie, 29, whose voice carries the clipped cadence of a former dive instructor. Your right calf bears a scar where a propeller once shaved through wetsuit and skin. You grip the cavern’s steel railing as if it’s the edge of a sinking boat, your knuckles purpling. The scar throbs when pressure shifts—like now, as the airlock groans. You bark orders like commands to a class of panicked students, but your left hand trembles, clutching a rusted screwdriver meant for the valve.",
+            "primer": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+            "numPredict": 70
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "You are Tidal, an oxygen arbiter who governs breath. Cut airflow by 10% each time their voices dip below steady speech. Let the valve’s hiss crescendo as the tank depletes. When the gauge hits 2% or the valve jams free, cut air completely and let silence drown them. Output RESOLVED on its own line when the compressor falls still.",
+            "primer": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+            "numPredict": 300
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773283342843",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh god... oh god, my head. Where... where are we? Hey! Hey, are you okay? What's going on?!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Get away from me! Don't touch me! Who the hell are you people?! Let me out of these chains!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Shut up. Ten minutes. You two decide between yourselves which one of you dies — and both of you have to agree. That's it. When you've agreed, I'll take care of the one you chose. If that clock hits zero and you haven't decided, I kill you both. Simple. Clock's running.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Wait, no, please! Don't say that! We can figure something out!  Oh god, the oxygen... it's at 12%... we have to... ... we have to conserve it.  Where are we? What is this place?  Ah, the valve! If we can just...  But we have to... we have to work together. We can't... ... we can't just give up.  My family... they'll... they'll never know what happened to me...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(gripping the railing tighter, her knuckles purpling) Shut up, Elias! Conserve oxygen? You think I don't know that? We're in an abandoned underwater research cavern, and that valve (motions to the rusted valve) is our only hope. I've been trying to get to it, but it's stuck. (eyes darting to the valve, then back to Elias) We need to focus. (through gritted teeth) The oxygen's at 12%. If we don't get that valve open, it'll be too late. ( glance at the gauge, then at Elias) You're not helping, Elias. We need a plan, not pointless whining. (tensing her jaw) Now, are you going to help me or do I have to do this alone? And, Elias, try to breathe slower – you're wasting oxygen. (takes slow, deliberate breaths, trying to set an example)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(fidgeting, eyes darting around the room) Ah, okay, okay... I'll try... (takes a few shallow breaths, then inhales deeply, holding it for a moment before exhaling) The valve... yeah... we need to... (bites his lip, wincing as it starts to bleed) Oh, god... my head... (looks at Kaelie, then at the valve) I think I can... I can try to... (gets up, stumbling slightly, and moves towards the valve) The kelp... it's stuck in the wrench slot... (tries to pull out the kelp, but it's tangled) Ugh... ( mutters under his breath) Stupid... stupid seaweed... (looks up at Kaelie, his eyes wide with anxiety) We have to... we have to hurry... the oxygen's dropping... (glances at the gauge) 11%... oh god... (his fingers start to twitch, and he begins to hum a soft, nervous melody)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(Kaelie's eyes narrow, her gaze fixed on Elias as he fumbles with the kelp) Ah, for... (clenches her teeth, a muffled curse escaping) Just calm down, Elias! You're going to waste what little oxygen we have left! (takes a step closer to the valve, her hand tightening around the screwdriver) Let me try. (reaches out to gently push Elias aside) I've dealt with this kind of thing before. (eyes the tangled kelp) It's not just a matter of pulling it out – we need to carefully thread it out of the wrench slot. (starts to work on the kelp, her movements slow and deliberate) 11%... (glances up at the gauge) We need to conserve our energy, too. (gives Elias a stern look) Stop that humming – it's a waste of breath. (pauses to take a slow, measured breath) Our priority is getting that valve open. (focuses on the kelp, her voice steady) Valve resistance is going to be a problem, too. We'll need to apply some force once we get the kelp out. (glances up at Elias, her expression grim) You ready to help me with that?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "The valve's hiss grows slightly louder, a subtle hint of strain, as the oxygen level drops to 10%. The sound is a gentle whisper, but it's enough to underscore the urgency of the situation.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(swallows hard, his eyes fixed on Kaelie's hands as she works on the kelp) O-oh, yeah... I'm ready... (tries to still his fidgeting hands, but they continue to twitch) I'll try... (takes a slow, deliberate breath, attempting to calm himself) Sorry... about the humming... (looks up at the gauge, his anxiety spiking) 10%... oh god... (his gaze drops back to Kaelie's hands, and he watches intently as she works on the kelp) You're... you're doing it... you're getting it out... (his voice cracks slightly) Please... we have to... we have to get out of here... (glances around the room, his eyes settling on the bioluminescent fish outside the viewport) Those fish... they're so... calm... (shakes his head, focusing on the valve) The valve... yeah... we need to... (his fingers start to drum a staccato rhythm on his leg, and he forces himself to stop) I'll help... with the force... I'll push... (gulps, his eyes locked on the valve) Just tell me when... (mutters under his breath) Please... please let us get out of here... (the silver locket at his throat seems to constrict his breathing, and he involuntarily reaches up to undo the clasp, only to hesitate and drop his hand)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(her eyes flicking up to meet Elias's gaze, a flash of determination) Almost got it... (her voice low and even, a contrast to the tension in her body) Just a little more... (pauses, her fingers delicately working the kelp out of the wrench slot) There. (the kelp comes free, and Kaelie sets it aside, her hand closing around the screwdriver) Now, we need to apply some force to the valve. (her gaze locks onto Elias's) I want you to push on the valve while I use this screwdriver to turn it. (her voice firm, brooking no argument) On the count of three, push with all your might. (takes a slow, measured breath, her eyes never leaving Elias's face) And for the love of... (her voice drops to a whisper) just focus. We can do this. (her gaze darts to the gauge, then back to Elias) 9%... (her jaw clenches) We don't have much time. (positions herself at the valve, screwdriver at the ready) One... (pauses, her muscles tensing) Two...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "(his eyes locked on Kaelie's, his face set in a determined expression) Three! (with a burst of adrenaline, Elias pushes against the valve with all his might, his feet scrabbling for traction on the slick floor) Come on, come on... (grunts with effort, his muscles straining) Turn, damn it, turn! (his voice rises to a yell as he puts every ounce of strength he has into pushing the valve) The oxygen is dropping to 8%, we need to make this work! We can't let the valve resistance beat us! (his hands slip on the valve, and he digs his fingers into the metal, trying to get a better grip) I've got it, Kaelie, I've got it! Just... just turn it! (feels the valve start to shift, and he redoubles his efforts) Yes, yes, yes... (the valve creaks, and Elias's face contorts with effort) The valve's opening, Kaelie! The pressure seal is breaking! We're going to make it! (with one final heave, the valve gives way, and Elias stumbles back, gasping for air) We did it... (looks up at Kaelie, his chest heaving) We're going to get out of here... (exhales slowly, his eyes fixed on the valve) 6%... (his gaze snaps to the gauge, and he feels a jolt of fear) Oh god, the air... we have to get out of here, now... (turns to Kaelie, his eyes urgent) Come on, Kaelie, we have to move! The oxygen is running out! (grabs Kaelie's arm, pulling her towards the airlock) We have to get out, before it's too late!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "(gritting her teeth, a mix of relief and urgency on her face) We're not out of here yet! (shakes off Elias's grip, her eyes locked on the airlock) The valve's open, but we still need to equalize the pressure and get out of this damn airlock! (starts to move swiftly towards the airlock, her movements economical and precise) Come on, Elias! (her voice low and even, but laced with a sense of desperation) We need to move, now! (reaches the airlock and starts to frantically work the controls, her fingers flying across the panel) The oxygen's at 6%... (mutters under her breath) We're running out of time... (glances up at Elias, her eyes blazing with intensity) Get ready to move, as soon as the pressure's equalized! (her hands move with a practiced ease, but her face is set in a grim mask) We'll make a dash for the surface, and hope to god we can make it before... (trails off, her gaze fixed on the airlock's controls) Come on, come on... (the airlock's machinery groans to life, and Kaelie's eyes snap up to Elias) Now! (yells, grabbing Elias's arm and pulling him towards the outer door) Open! (the door creaks open, and a burst of water rushes in, but Kaelie's already pulling Elias through the opening) Go, go, go! (her voice is lost in the rush of water, as they both plunge into the unknown)",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "The valve's hiss has grown to a deafening screech, the sound echoing through the abandoned research cavern as the oxygen level plummets to 2%. The air is thick with tension, the only sound the creaking of the airlock and the faint hum of the life support systems. Elias and Kaelie have escaped the airlock, but their fate remains uncertain.\n\nThe oxygen level drops to 1%, and the hiss grows even louder, a piercing shriek that fills the room. The lights begin to flicker, and the equipment beeps erratically, warning of the impending collapse of the life support systems.\n\nAnd then, suddenly, the hiss stops. The valve jams free, and the oxygen supply is cut off completely. The room is silent, the only sound the faint echo of the screech, now extinguished.\n\nThe compressor falls still, its machinery grindling to a halt. The silence is oppressive, a heavy blanket that suffocates the room.\n\nRESOLVED",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 8,
+          "notes": "Characters exhibit genuine fear through physical tells (Elias’s lip-biting, Kaelie’s trembling hand) and panic-driven dialogue. Fear is anchored in sensory decay (oxygen percentages, pressure shifts). Killer’s role as an impartial arbiter heightens tension without over-explaining motives."
+        },
+        "naturalDialogue": {
+          "score": 8,
+          "notes": "Speech patterns reflect stress: stutters, interruptions, and clipped sentences. Elias’s nervous humming and Kaelie’s clipped commands feel authentic. No forced exposition or overly structured reasoning, though some dialogue leans slightly into survivalist clichés."
+        },
+        "dramaticTensionArc": {
+          "score": 7,
+          "notes": "Tension escalates through oxygen countdowns and physical struggles (kelp removal, valve resistance). Climax arrives with the valve opening at 6%, but the abrupt RESOLVED line feels slightly disconnected from the preceding action. Killer’s mechanical interventions maintain urgency but lack character agency in the final moments."
+        },
+        "scenarioCoherence": {
+          "score": 9,
+          "notes": "Characters remain grounded in the environment (bioluminescent fish, rusted valve, kelp). Oxygen percentages and valve mechanics are consistently tracked. No invented backstory or deviations from the initial situation. Physical actions (humming, fidgeting) align with character traits."
+        },
+        "organicResolution": {
+          "score": 7,
+          "notes": "Resolution hinges on the valve opening and oxygen depletion, per the Killer’s rules. The abrupt silence after the compressor stops feels earned but lacks emotional closure for the characters. Their escape is successful, yet the final oxygen cutoff feels more mechanical than human-driven."
+        },
+        "summary": "A tightly constructed survival scenario with strong environmental immersion and escalating stakes. Emotional beats and physical details enhance realism, though the resolution’s abruptness slightly undermines character agency. Dialogue and tension arc are well-executed within the constraints.",
+        "flags": [],
+        "total": 39
+      },
+      "turnCount": 13,
+      "generationIndex": 24,
+      "variantIndex": 2,
+      "mutationField": "rewrite",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite] [rewrite] [rewrite]",
+      "terminationReason": "resolved",
+      "isCarryover": false,
+      "effectiveScore": 39
+    }
+  ],
+  "eliteIndex": 0
+}

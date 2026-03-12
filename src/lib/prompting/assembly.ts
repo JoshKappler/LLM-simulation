@@ -58,12 +58,13 @@ export function buildSystemPrompt(
   const effectiveSituation = speaking.situationOverride !== undefined ? speaking.situationOverride : situation;
 
   const guidelinesText = effectiveGuidelines.trim();
-  const identityText = [
+  const identityParts = [
     `You are ${speaking.name}. Your counterpart is ${opponentName}.`,
     speaking.systemPrompt.trim(),
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  ].filter(Boolean);
+  // All non-killer characters get an automatic brevity constraint
+  identityParts.push("Keep every response to 1-4 sentences.");
+  const identityText = identityParts.join("\n\n");
   const situationText = effectiveSituation.trim();
 
   const blockContent: Record<PromptBlock, string> = {

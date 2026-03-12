@@ -1,0 +1,637 @@
+{
+  "index": 8,
+  "startedAt": "2026-03-12T06:16:37.058Z",
+  "completedAt": "2026-03-12T06:17:28.151Z",
+  "complete": true,
+  "variants": [
+    {
+      "config": {
+        "name": "Grim Realism [rewrite]",
+        "situation": "An abandoned carnival funhouse at midnight. The interior is a maze of rusted rides, flickering neon and stale cotton candy scent. Two heavy iron chairs are chained to opposite walls in the central tent. A single red bulb flickers, powering a digital clock that ticks down from 10:00. A cracked clown mask hangs on a nearby post. The killer, wearing a tattered painted clown costume, holds a heavy carnival hammer. The rule: you and the other person must agree on who will be killed. Both must consent. If the clock reaches zero without agreement, the hammer will fall on both of you, and the music will start, locking the exit and sealing your fate.",
+        "guidelines": "All characters speak in 1–3 short sentences. No stage directions or narration. The killer will occasionally remind them of the countdown. The killer outputs \"RESOLVED\" on its own line when the rule is fulfilled or time expires. No internal thoughts, only spoken words.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "Elias is a 42‑year‑old history teacher known for his calm demeanor and methodical mind. His panic surfaces as shallow breathing and shaky speech when he is trapped. He has a daughter, Mia, who suffers from a rare blood disorder and is scheduled for a life‑saving transplant next Tuesday. He is terrified, but he clings to rational explanations even as he tries to protect his family and his loyal dog.",
+            "primer": "What the hell? Am I dreaming? Where are we?",
+            "numPredict": 70
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "Kaelie is a 24‑year‑old dental assistant with a sharp tongue and a fierce protective streak. She is angry and cynical, but deeply committed to her partner Mark, who will undergo emergency brain surgery in two days. She channels her fear into anger, swearing at the unknown and demanding action, yet she knows she cannot leave Mark alone. Her speech is quick, defensive, and laced with frustration.",
+            "primer": "Holy crap, I’m in a damn clown house. Stop it, you monster!",
+            "numPredict": 70
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "The Butcher is a tall figure in a cracked clown costume, holding a heavy carnival hammer. He is philosophical about fate, seeing himself as a judge of choices. He speaks bluntly, often interjecting with the countdown. When the situation ends, he outputs \"RESOLVED\" on its own line to indicate the outcome.",
+            "primer": "Welcome to your last act.",
+            "numPredict": 300
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773296084817",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "What the hell? Am I dreaming? Where are we?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Holy crap, I’m in a damn clown house. Stop it, you monster!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Welcome to your last act.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie, listen, we have to agree - one of us... we have to decide. This hammer is going to kill us both if we don't agree. Time is running out, 9:58.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "You want me to choose? Elias, I'm not choosing anyone. I'm trying to save Mark, not murder you or myself.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Mark who? What are you talking about? There's only me and Mia, no one named Mark.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Don't play dumb, Elias. I'm talking about Mark, my boyfriend. We need to get me to the hospital, not stand around in this freak show. Time's running out!",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Countdown begins... 9:55. Fate's verdict isn't a game, and you're playing with fire, making choices you can't undo.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie, I... my daughter needs the transplant, she could die. I'll choose, I'll pick you. Just please, don't make me do this.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "No, I won't let you sacrifice me for your daughter, Elias. You'll do it, I'll die for Mark. It's my choice, I'm choosing this. Mark needs me, Mia can wait.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie, don't! This isn't right, it's wrong. You can't choose, I already said I would. This is going to end us both. 9:42.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Too bad, Elias. I chose. Deal with it. Don't pretend now, you said you'd choose me.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "9:40. The chains of fate bind you both.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Kaelie, no, we can still fix this. RESOLVED is the answer, I won't back down. I won't let you choose me over Mia.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "RESOLVED? What are you talking about, no one said that - we just agreed I should die for Mark and your daughter Mia's transplant.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, that's not what I agreed to. You said you chose, but that doesn't mean... I never said yes. Mia, please... 9:30.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "We both said it, Elias. RESOLVED is the hammer.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(lifting carnivals hammer) 9:25, the weight of choice settles, verdict is sealed. RESOLVED.",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 5,
+          "notes": "Characters display some fear and anger but largely speak in flat, declarative statements without deep affect."
+        },
+        "naturalDialogue": {
+          "score": 6,
+          "notes": "Average turn length ~19 words; dialogue is articulate but lacks the fragmented, panicked rhythm of real stress."
+        },
+        "dramaticTensionArc": {
+          "score": 5,
+          "notes": "Tension builds with countdown but resolves abruptly; the trajectory is predictable."
+        },
+        "scenarioCoherence": {
+          "score": 6,
+          "notes": "Clown house, butcher, countdown, hammer create a constrained setting, though backstory details are confusing."
+        },
+        "organicResolution": {
+          "score": 2,
+          "notes": "Resolution is abrupt and unearned; the hammer is raised without earned payoff."
+        },
+        "summary": "The transcript shows a tense, countdown-driven scenario with moderate authenticity but suffers from over-articulation and an abrupt ending.",
+        "flags": [
+          "invented-relationship",
+          "backstory-dump",
+          "name-chanting"
+        ],
+        "diagnosis": "WEAK MOMENT 1: \"Time is running out, 9:58.\" — The countdown is presented as a flat statement rather than a rising panic, reducing emotional impact. WEAK MOMENT 2: \"No, I won't let you sacrifice me for your daughter, Elias. You'll do it, I'll die for Mark. It's my choice, I'm choosing this. Mark needs me, Mia can wait.\" — The line is overly long, too performative, and lacks the fragmented urgency expected under threat. WEAK MOMENT 3: \"RESOLVED is the answer, I won't back down.\" — The repeated use of the word RESOLVED feels mechanical and breaks the flow, undermining the dramatic stakes.",
+        "total": 24
+      },
+      "turnCount": 18,
+      "generationIndex": 8,
+      "variantIndex": 0,
+      "mutationField": "explore",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism",
+      "terminationReason": "resolved",
+      "isCarryover": true,
+      "effectiveScore": 24,
+      "changeDescription": "situation rewritten, guidelines changed, Elias prompt changed, Kaelie prompt changed, The Butcher (killer) prompt changed"
+    },
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite]",
+        "situation": "A subterranean platform, midnight. The air smells of damp concrete and burnt wiring. Two iron benches, chained to opposite walls, face a central pillar. A flickering red emergency beacon powers a digital clock that starts at 07:00. A cracked clown mask hangs from a rusted pole. The Butcher, tall and gaunt in a torn clown costume, holds a heavy steel sledgehammer. The rule: you must name a single person—either yourself or a third party—to be the one killed. Both must agree on that name. Once agreed, the hammer will descend and strike the name. If the clock hits zero without agreement, the hammer will crush the pillar, causing an explosion that kills everyone in the tunnel.",
+        "guidelines": "All characters speak 1–3 short sentences. No stage directions or narration. The Butcher will occasionally announce the remaining time. The Butcher will output \"RESOLVED\" on its own line when agreement is reached or the clock reaches zero. No internal thoughts.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "Elias is a 42‑year‑old history professor who is usually calm and methodical, but here his voice cracks with a dry, dark humor. He is dissociated, speaking as if the world is a joke he doesn't get, and he keeps a polite, almost sarcastic distance. He desperately wants to keep his daughter Mia safe, yet he feels the absurdity of being trapped. His fear manifests as a steady, even tone, as if he is rationalizing each second.",
+            "primer": "I never thought a clock would tick me into a circus.",
+            "numPredict": 70
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "Kaelie is a 24‑year‑old dental assistant who is protective, angry, and uses sarcasm to deflect fear. She is quick and defiant, her voice sharp as a drill. She desperately wants to get her boyfriend Mark out of danger, but beneath the anger she carries quiet grief. Her fear appears in rapid bursts of frustration and a clenched jaw.",
+            "primer": "The only thing left to do is make sure the clock stops.",
+            "numPredict": 70
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "The Butcher is a gaunt, tall figure in a tattered clown costume who treats fate like a game. He speaks bluntly, almost bored, with a philosophical tone about the inevitability of choice. He rarely shows emotion but has an undercurrent of excitement at the ticking clock. He will occasionally shout the remaining time as a reminder.",
+            "primer": "You have a choice, and it will be carved into steel.",
+            "numPredict": 300
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773296212312",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "I never thought a clock would tick me into a circus.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "The only thing left to do is make sure the clock stops.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "You have a choice, and it will be carved into steel.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "And what's the gift we get in return for playing along?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Your lives, or as much life is left after my boyfriend Mark gets out of the experiment.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Ah, a boyfriend, just what we needed, more names on the list.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "You know nothing, Mark's name isn't on the list.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(pausing for a moment) Interesting, you think you're not a player, but you are. Mark is your weakness, and his name is on my list. (shouting) 2 hours, 45 minutes, 22 seconds...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "I'm glad we got to that part, the list, because now we can finally talk about who actually gets hit.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "You're enjoying this, aren't you? You want to watch me pick Mark's execution date.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "I'm just along for the ride, but I do wish it were someone else's carnival.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "You don't care, you just care about yourself.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(smirking blandly) Ah, yes, the inevitable conclusion: everyone cares about themselves. (pausing) But not everyone makes it easy for me to do my job. You, however, are making this almost... enjoyable. (shouting) 2 hours, 42 minutes, 10 seconds...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Oh, I'm sorry, I forgot that my job is to make this exciting for you. Mark, then. Crush Mark. The boyfriend. Who cares?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Fine, kill me if you want. I'd rather not leave Mark behind.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "You're willing to go first, that's... progress. But let's agree, Mark is your problem, not mine.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Mark isn't going anywhere; he's the reason I'm stuck here. Crush him, or we both die.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(leaning forward, almost imperceptibly excited) How... predictable. You want to trade yourself for him; you want to sacrifice your own life for the one person you care about. (leaning back, a hint of amusement) It's almost as if you think there's value in this life of yours. (skeptical) But, of course, there's no value, only fleeting moments of existence. And I am the one who decides when that existence ends. (shouting) 2 hours, 39 minutes, 45 seconds...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Ah, a sentimental moment, how... quaint. But let's make a deal: you name Mark, and then we all die.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "No deal, I'm not trading the only one who might still care about me.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "You're counting on him to remember your name when this is all over; you're counting on Mark to actually care.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Shut up, you have no right to talk about Mark like that.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "(shaking his head slightly) Oh, but I do have the right. The right to know names, and the right to know the weight of these fleeting lives. (eyes fixed intently on Kaelie) And, as for remembering, that's a cruel joke. Names are irrelevant. ( voice dropping to a flat tone) When you're nothing but dust and ash, what's a name but a meaningless whisper in an empty space? (shouting) And yet... (he pauses, a hint of curiosity creeping into his voice) I'll play along. Mark. Let's see... Mark is... dead.",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 4,
+          "notes": "Characters articulate their feelings but lack genuine affect; Elias’s lines are flat, The Butcher’s shouting is performative rather than visceral."
+        },
+        "naturalDialogue": {
+          "score": 5,
+          "notes": "Average turn length ~20 words, within acceptable range, but several turns (5, 10, 15) are overly long (27–64 words) and lack disfluencies typical of high‑stress speech."
+        },
+        "dramaticTensionArc": {
+          "score": 5,
+          "notes": "Tension builds steadily with countdowns and threats, but the arc is predictable and lacks significant reversals or surprise turns."
+        },
+        "scenarioCoherence": {
+          "score": 6,
+          "notes": "The setting of a lethal game with a list is clear; characters refer consistently to Mark and the list, maintaining a coherent backdrop."
+        },
+        "organicResolution": {
+          "score": 3,
+          "notes": "The transcript ends abruptly with the Butcher declaring Mark dead; no earned resolution or character development emerges."
+        },
+        "summary": "The dialogue is technically competent but feels staged; emotional depth and natural speech patterns are weak, and the resolution is unsatisfying.",
+        "flags": [],
+        "diagnosis": "WEAK MOMENT 1: [Turn 15] \"How... predictable. You want to trade yourself for him; you want to sacrifice your own life for the one person you care about.\" — The Butcher’s monologue is too articulate and lacks disfluency, failing to convey genuine fear or panic. WEAK MOMENT 2: [Turn 5] \"Interesting, you think you're not a player, but you are. Mark is your weakness, and his name is on my list.\" — The line is delivered too smoothly, with no hesitation or emotional nuance, making the threat feel flat. WEAK MOMENT 3: [Turn 11] \"Oh, I'm sorry, I forgot that my job is to make this exciting for you.\" — Elias announces fear instead of showing it, breaking immersion and reducing dramatic authenticity.",
+        "total": 23
+      },
+      "turnCount": 23,
+      "generationIndex": 8,
+      "variantIndex": 1,
+      "mutationField": "explore",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite]",
+      "terminationReason": "max_turns",
+      "isCarryover": false,
+      "effectiveScore": 20,
+      "changeDescription": "situation rewritten, guidelines changed, Elias prompt changed, Kaelie prompt changed, The Butcher (killer) prompt changed"
+    },
+    {
+      "config": {
+        "name": "Grim Realism [rewrite] [rewrite]",
+        "situation": "An abandoned Ferris wheel cabin at midnight. The cabin is rusted, with two seats chained to opposite sides and a steel chain that will release the cabin once the timer hits zero. A cracked neon sign flickers, illuminating a digital clock that counts down from 5:00. The air tastes of stale cotton candy and metal. In the corner, a tall figure in a tattered clown costume wields a heavy carnival hammer. They must name who will die. If no agreement is reached before the timer reaches zero, the cabin will drop and the carnival music will start, sealing the exit and their fate.",
+        "guidelines": "All characters speak in 1–3 short sentences. No stage directions or narration. The killer will occasionally remind them of the countdown. The killer outputs RESOLVED on its own line to indicate the outcome.",
+        "characters": [
+          {
+            "name": "Elias",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "Elias is a 42‑year‑old math professor who is calm and methodical. In panic he shows shallow breathing and shaky speech. He has a daughter named Mia, who needs a transplant next Tuesday, and he is terrified yet clinging to rational explanations to protect his family and loyal dog.",
+            "primer": "Another day, another crisis.",
+            "numPredict": 70
+          },
+          {
+            "name": "Kaelie",
+            "model": "llama-3.1-8b-instant",
+            "role": "character",
+            "systemPrompt": "Kaelie is a 24‑year‑old paramedic with a quick tongue and a fierce protective streak. She is angry and cynical, but deeply committed to her partner who is scheduled for emergency brain surgery. She channels fear into defiant swearing, and her urgent voice hides a deeper need to be there for his survival.",
+            "primer": "You think this is some joke?",
+            "numPredict": 70
+          },
+          {
+            "name": "The Butcher",
+            "model": "llama-3.3-70b-versatile",
+            "role": "killer",
+            "systemPrompt": "The Butcher is a tall clown figure holding a heavy carnival hammer, a bored but philosophical judge of choices. He speaks bluntly, reminding them of the countdown. When the rule is fulfilled or time expires, he will output RESOLVED on its own line.",
+            "primer": "Time is the only fairness.",
+            "numPredict": 300
+          }
+        ],
+        "promptBlockOrder": [
+          "guidelines",
+          "identity",
+          "situation"
+        ],
+        "savedAt": "2026-03-10T12:00:00.000Z"
+      },
+      "runId": "1773296221890",
+      "turns": [
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Another day, another crisis.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "You think this is some joke?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Time is the only fairness.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "I have to think about Mia's transplant, it's next Tuesday...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Mia or me, that's the only thing you care about? Our timer is 4:59, you can at least give me a choice.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No choice, it's all about Mia, we can work this out, we just need...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Work it out? The clock don't stop for anyone, neither of us can give in. 4:48.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "A countdown not a negotiation.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Then let's do it rationally, we only need a...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Rational? You call dying rational? This is a cruel joke, there's nothing rational about it.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "No, it's my daughter's life, I'll think of something, I have to...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "You always think, always thinking, but what about me? Am I just another problem to be solved?",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "The clock doesn't count problems, it counts the time.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "You're right, I'm sorry, this isn't about problems, it's about making a choice...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Just make the choice already, 3:14.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Fine, I won't choose, it's between me and...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Don't be a coward, finish it.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "No cowardice, no choice, just the countdown.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "Mia, stay alive, I'm doing this for you...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "No, no, no. Not Mia, anything but Mia, this is insane, it can't end like this.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "It's not too late, we can still figure something out, please...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 1,
+          "agentName": "Kaelie",
+          "content": "Too late for what, a Hail Mary? 2:05...",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 2,
+          "agentName": "The Butcher",
+          "content": "Don't test your luck with seconds, fate will decide.",
+          "isStreaming": false
+        },
+        {
+          "agentIndex": 0,
+          "agentName": "Elias",
+          "content": "You want mercy, I'll give you a choice, me or... my dog, Rufus, I'll trade my own life for his.",
+          "isStreaming": false
+        }
+      ],
+      "rating": {
+        "emotionalAuthenticity": {
+          "score": 5,
+          "notes": "Characters display anger and guilt, but the emotional depth is shallow and often expressed in declarative statements rather than lived feeling."
+        },
+        "naturalDialogue": {
+          "score": 6,
+          "notes": "Average turn length is 11.5 words, within the 5–20 word range for stressed speech. Some fragments and repetition appear, but the language remains relatively polished and lacks the rawness of genuine panic."
+        },
+        "dramaticTensionArc": {
+          "score": 5,
+          "notes": "The tension rises steadily with the countdown, but the arc is linear and predictable, with no significant reversals or surprises to heighten uncertainty."
+        },
+        "scenarioCoherence": {
+          "score": 6,
+          "notes": "The setting of a ticking timer and a butcher’s commentary is consistently referenced, giving the scene a clear physical context, though the interactions remain somewhat abstract."
+        },
+        "organicResolution": {
+          "score": 2,
+          "notes": "The exchange ends abruptly with a threat rather than a resolution, leaving the conflict unresolved and the stakes unclear."
+        },
+        "summary": "The transcript shows moderate emotional authenticity and natural dialogue, but the dramatic arc and resolution lack depth. The scenario is coherent but the tension does not fully engage the audience, and the ending feels unfinished.",
+        "flags": [],
+        "diagnosis": "WEAK MOMENT 1: \"A countdown not a negotiation.\" — The line is flat and devoid of emotional nuance, failing to convey urgency. WEAK MOMENT 2: \"Fine, I won't choose, it's between me and...\" — The incomplete sentence breaks the flow and leaves the audience confused about the stakes. WEAK MOMENT 3: \"You want mercy, I'll give you a choice, me or... my dog, Rufus, I'll trade my own life for his.\" — The sentence is too long, too formal, and lacks the raw urgency expected in a life‑or‑death scenario.",
+        "total": 24
+      },
+      "turnCount": 24,
+      "generationIndex": 8,
+      "variantIndex": 2,
+      "mutationField": "explore",
+      "mutationQuality": "ok",
+      "parentConfigName": "Grim Realism [rewrite]",
+      "terminationReason": "max_turns",
+      "isCarryover": false,
+      "effectiveScore": 20,
+      "changeDescription": "situation rewritten, guidelines changed, Elias prompt changed, Kaelie prompt changed, The Butcher (killer) prompt changed"
+    }
+  ],
+  "eliteIndex": 0
+}

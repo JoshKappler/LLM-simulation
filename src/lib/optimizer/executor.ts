@@ -107,7 +107,7 @@ async function executeTurn(
   try {
     rawContent = await callModel(speaking.model, system, messages, {
       temperature: options.temperature,
-      numPredict: speaking.numPredict ?? options.numPredict ?? 2000,
+      numPredict: speaking.numPredict ?? options.numPredict ?? 500,
       stop,
       signal: options.signal,
       onToken: options.onToken

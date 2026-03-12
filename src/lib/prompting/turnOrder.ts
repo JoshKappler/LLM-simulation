@@ -9,10 +9,10 @@ import type { AgentConfig, ConversationTurn } from "../types";
 // ── Killer thresholds ─────────────────────────────────────────────────────────
 
 /** Minimum number of non-killer turns before the killer first evaluates. */
-export const KILLER_FIRST_THRESHOLD = 18;
+export const KILLER_FIRST_THRESHOLD = 0;
 
 /** Minimum number of turns between subsequent killer evaluations. */
-export const KILLER_INTERVAL = 3;
+export const KILLER_INTERVAL = 4;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
