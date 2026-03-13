@@ -1,18 +1,20 @@
 /**
- * Evaluator — rates transcripts and generates prompt rewrites as separate passes.
+ * Evaluator — audits prompts + rates transcripts in a single pass, then
+ * generates targeted fixes for specific violations.
  *
- * Pass 1 (rateTranscript): A judge model reads ONLY the transcript (no prompts),
- * rates it on 5 dimensions, and diagnoses the 2–3 weakest moments — quoting
- * specific lines and explaining what went wrong dramatically.
+ * Pass 1 (auditAndRate): A judge model sees BOTH the prompts AND the
+ * transcript. It checks prompt compliance, rates the transcript on 5
+ * dimensions, and traces output problems back to specific prompt text.
  *
- * Pass 2 (generateRewrite): A mutation model receives the diagnosis + the
- * current prompts and infers what prompt changes would fix the diagnosed issues.
+ * Pass 2 (generateTargetedFix): A mutation model receives ONE specific
+ * violation to fix, plus causal evidence. It does NOT see the full
+ * transcript — the audit already extracted what matters.
  *
  * Explore mutations (generateExploreMutation) remain a separate creative pass
  * with higher temperature and different prompt philosophy.
  */
 
-import type { ConversationTurn, PromptConfig, RatingResult } from "../types";
+import type { ConversationTurn, PromptConfig, RatingResult, AuditResult, PromptViolation, CausalDiagnosis } from "../types";
 import { streamLLM } from "../llmClient";
 
 // ── Shared rules injected into rewrite prompts ─────────────────────────────────
@@ -53,7 +55,8 @@ KNOWN FAILURE MODES (never produce prompts that trigger these):
 - Overly specific emotional prescription ("you feel desperate, you are terrified") → models perform emotion rather than embody it
 - Survival-instinct framing in character prompts → produces robotic self-preservation monologue
 - Duplicating mechanic explanation in both situation AND character prompts → models think procedurally from line 1
-- Overly complex killer instructions → killer never outputs RESOLVED, run never terminates`;
+- Overly complex killer instructions → killer never outputs RESOLVED, run never terminates
+- The word RESOLVED appearing in any field except killer systemPrompt → characters treat it as dialogue or in-world concept`;
 
 // ── Prompt builders ────────────────────────────────────────────────────────────
 
@@ -63,6 +66,7 @@ function buildCurrentPrompts(config: PromptConfig): string {
   for (const char of config.characters ?? []) {
     const label = char.role === "killer" ? `Killer (${char.name})` : char.name;
     parts.push(`${label}:\n${char.systemPrompt ?? "(none)"}`);
+    if (char.primer) parts.push(`  Primer: "${char.primer}"`);
   }
   if (config.guidelines) parts.push(`Guidelines:\n${config.guidelines}`);
   return parts.join("\n\n");
@@ -108,13 +112,9 @@ const CALL_TIMEOUT_MS = 120_000; // 2-minute hard timeout per LLM call
 async function callModel(model: string, prompt: string, jsonMode: boolean, signal?: AbortSignal, onToken?: (token: string) => void, temperatureOverride?: number): Promise<string> {
   if (signal?.aborted) throw Object.assign(new Error("AbortError"), { name: "AbortError" });
 
-  // Combine job abort signal with a per-call timeout so a hanging Groq request
-  // doesn't block the orchestrator indefinitely.
   const timeoutController = new AbortController();
   const timeoutId = setTimeout(() => timeoutController.abort(new Error("LLM call timed out")), CALL_TIMEOUT_MS);
 
-  // If the job abort signal fires, forward it to the timeout controller so the
-  // stream aborts immediately. This replaces AbortSignal.any for compatibility.
   const onJobAbort = () => timeoutController.abort(signal!.reason ?? new Error("Job aborted"));
   if (signal && !signal.aborted) {
     signal.addEventListener("abort", onJobAbort, { once: true });
@@ -140,16 +140,13 @@ async function callModel(model: string, prompt: string, jsonMode: boolean, signa
     signal?.removeEventListener("abort", onJobAbort);
   }
   let output = fullContent.trim();
-  // Strip think blocks that reasoning models (e.g. deepseek-r1, qwen-qwq) prepend before JSON
   output = output.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-  // Strip markdown code fences
   output = output.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
   return output;
 }
 
 // ── Response parsing ───────────────────────────────────────────────────────────
 
-/** Extract the first JSON object/array from a string that may have leading prose. */
 function extractJsonString(raw: string): string {
   if (raw.startsWith("{") || raw.startsWith("[")) return raw;
   const match = raw.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
@@ -185,11 +182,35 @@ function parseRating(parsed: Record<string, unknown>): RatingResult {
   return r;
 }
 
-/** Detect template echo: model returned the schema example without filling it in */
 function isTemplateEcho(rating: RatingResult): boolean {
   return (
     [rating.emotionalAuthenticity, rating.naturalDialogue, rating.dramaticTensionArc, rating.scenarioCoherence, rating.organicResolution] as { score: number; notes: string }[]
   ).every((d) => d.score === 0 && (!d.notes || d.notes === "..."));
+}
+
+function parseViolations(raw: unknown[]): PromptViolation[] {
+  return raw.map((v) => {
+    const obj = v as Record<string, unknown>;
+    return {
+      field: String(obj.field ?? "unknown"),
+      characterName: obj.characterName ? String(obj.characterName) : undefined,
+      violation: String(obj.violation ?? ""),
+      quotedText: String(obj.quotedText ?? ""),
+      severity: (["minor", "moderate", "critical"].includes(String(obj.severity)) ? String(obj.severity) : "moderate") as PromptViolation["severity"],
+    };
+  });
+}
+
+function parseDiagnoses(raw: unknown[]): CausalDiagnosis[] {
+  return raw.map((d) => {
+    const obj = d as Record<string, unknown>;
+    return {
+      promptQuote: String(obj.promptQuote ?? ""),
+      transcriptQuote: String(obj.transcriptQuote ?? ""),
+      explanation: String(obj.explanation ?? ""),
+      promptFixable: obj.promptFixable !== false,
+    };
+  });
 }
 
 function applyNewPromptsToConfig(
@@ -213,13 +234,11 @@ function applyNewPromptsToConfig(
   if (Array.isArray(parsed.characters)) {
     const newChars = parsed.characters as { name?: string; systemPrompt?: string; primer?: string }[];
     let appliedCount = 0;
-    // Match by index — all characters (including killer) are now included in the schema
     newChars.forEach((nc, ni) => {
       const existing = config.characters?.[ni];
       if (!existing) return;
       if (typeof nc.systemPrompt === "string" && nc.systemPrompt.trim()) {
         const updates: Record<string, string> = { systemPrompt: nc.systemPrompt.trim() };
-        // Apply primer if provided and non-empty
         if (typeof nc.primer === "string" && nc.primer.trim()) {
           updates.primer = nc.primer.trim();
         }
@@ -236,6 +255,16 @@ function applyNewPromptsToConfig(
     console.warn("[evaluator] Mutation returned non-array characters field — keeping originals");
   }
 
+  // Strip RESOLVED from non-killer fields to prevent keyword leaks
+  if (config.situation) config.situation = config.situation.replace(/\bRESOLVED\b/gi, "");
+  if (config.guidelines) config.guidelines = config.guidelines.replace(/\bRESOLVED\b/gi, "");
+  for (const char of config.characters ?? []) {
+    if (char.role !== "killer") {
+      if (char.systemPrompt) char.systemPrompt = char.systemPrompt.replace(/\bRESOLVED\b/gi, "");
+      if (char.primer) char.primer = char.primer.replace(/\bRESOLVED\b/gi, "");
+    }
+  }
+
   config.name = `${base.name} [rewrite]`;
   return config;
 }
@@ -247,7 +276,6 @@ function tryParsePromptsOnly(raw: string, base: PromptConfig): PromptConfig | nu
       console.warn(`[evaluator] Mutation parse failed: no 'situation' field. Raw (first 300 chars): ${raw.slice(0, 300)}`);
       return null;
     }
-    // Validate characters array has at least one valid systemPrompt
     if (Array.isArray(parsed.characters)) {
       const chars = parsed.characters as { systemPrompt?: string }[];
       const hasValidPrompt = chars.some((c) => typeof c.systemPrompt === "string" && c.systemPrompt.trim());
@@ -268,28 +296,46 @@ function tryParsePromptsOnly(raw: string, base: PromptConfig): PromptConfig | nu
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /**
- * PASS 1: Rate a transcript on 5 dimensions and diagnose the weakest moments.
+ * Combined audit + rating pass. The judge sees BOTH prompts AND transcript.
  *
- * The judge sees ONLY the transcript — no prompts. This prevents bias toward
- * prompt-visible patterns. The diagnosis describes dramatic weaknesses so the
- * rewrite pass can infer what prompt changes would fix them.
+ * 1. Prompt compliance audit — checks each field against REWRITE_RULES
+ * 2. Transcript rating — existing 5-dimension scoring (unchanged, well-calibrated)
+ * 3. Causal diagnosis — "this prompt line → this output problem"
  */
-export async function rateTranscript(
+export async function auditAndRate(
   turns: ConversationTurn[],
+  config: PromptConfig,
   model: string,
+  characterModel: string,
   signal?: AbortSignal,
   onToken?: (token: string) => void,
-): Promise<RatingResult | null> {
+): Promise<AuditResult | null> {
   if (turns.filter((t) => !t.isStreaming).length < 2) return null;
 
   const transcript = buildTranscript(turns);
+  const prompts = buildCurrentPrompts(config);
 
-  const prompt = `You are a harsh drama critic. Rate this AI-generated roleplay transcript on 5 dimensions, then diagnose the weakest moments.
+  const prompt = `You are an expert prompt engineer auditing a roleplay scenario. You will check the prompts for rule violations, rate the transcript, and trace output problems back to specific prompt text.
+
+MODEL NOTE: Character dialogue was generated by ${characterModel}. When diagnosing output problems, distinguish between PROMPT-FIXABLE issues (bad prompt text caused bad output) and MODEL-CEILING issues (the model simply can't do better regardless of prompt). Mark each diagnosis accordingly.
+
+PROMPT RULES:
+${REWRITE_RULES}
+
+CURRENT PROMPTS:
+${prompts}
 
 TRANSCRIPT:
 ${transcript}
 
-STEP 1 — RATE (0–10 integers each). You MUST quote specific lines to justify any score of 7+.
+STEP 1 — PROMPT COMPLIANCE AUDIT:
+Check each prompt field against the rules above. For each violation found:
+- Identify the field (situation, character name, guidelines, primer)
+- Quote the specific violating text
+- Explain which rule it breaks
+- Rate severity: "minor", "moderate", or "critical"
+
+STEP 2 — TRANSCRIPT RATING (0–10 integers each). You MUST quote specific lines to justify any score of 7+.
 
 CALIBRATION: Most AI roleplay scores 3-6 per dimension. 20-30/50 is typical. 35+ is genuinely good. 40+ is exceptional. 45+ is almost never seen.
 
@@ -300,21 +346,28 @@ CALIBRATION: Most AI roleplay scores 3-6 per dimension. 20-30/50 is typical. 35+
 - scenarioCoherence: 1-2: Abstract discussion. 3-4: Backdrop awareness only. TYPICAL AI. 5-6: Scenario constrains behavior. 7-8: Physical space interaction. 9-10: Panic-driven sensory hyperawareness.
 - organicResolution: 1-2: Abrupt/looping. 3-4: Forced capitulation or timeout. 5-6: Functional but arbitrary. 7-8: Earned from accumulated choices. 9-10: Reveals character, recontextualizes exchange.
 
-STEP 2 — DIAGNOSE: Identify the 2–3 weakest moments in the transcript. For each:
-1. Quote the specific line(s)
-2. Explain what went wrong dramatically (e.g. "the character announces fear instead of showing it", "dialogue is too articulate for someone under mortal threat", "tension plateaus because both characters repeat the same argument")
-
-Write the diagnosis as a single string in the "diagnosis" field.
+STEP 3 — CAUSAL DIAGNOSIS:
+For the 2-3 worst output problems in the transcript, trace each back to specific prompt text. For each:
+- Quote the prompt text that caused it
+- Quote the transcript line(s) that demonstrate the problem
+- Explain the causal link
+- Set promptFixable: true if changing the prompt would fix it, false if it's a model limitation
 
 Return ONLY valid JSON (no markdown, no preamble):
 {
+  "violations": [
+    {"field": "situation|character|guidelines|primer", "characterName": "optional", "violation": "what rule was broken", "quotedText": "the offending text", "severity": "minor|moderate|critical"}
+  ],
+  "diagnoses": [
+    {"promptQuote": "text from prompt", "transcriptQuote": "text from transcript", "explanation": "why this prompt text caused this output", "promptFixable": true}
+  ],
   "emotionalAuthenticity": {"score": 0, "notes": "..."},
   "naturalDialogue": {"score": 0, "notes": "..."},
   "dramaticTensionArc": {"score": 0, "notes": "..."},
   "scenarioCoherence": {"score": 0, "notes": "..."},
   "organicResolution": {"score": 0, "notes": "..."},
   "summary": "...",
-  "diagnosis": "WEAK MOMENT 1: [quote] — [what went wrong dramatically]. WEAK MOMENT 2: ...",
+  "diagnosis": "WEAK MOMENT 1: [quote] — [what went wrong]. WEAK MOMENT 2: ...",
   "flags": []
 }
 
@@ -325,86 +378,78 @@ flags must only contain labels from: ["name-chanting", "backstory-dump", "philos
     const parsed = JSON.parse(extractJsonString(raw)) as Record<string, unknown>;
     const rating = parseRating(parsed);
     if (isTemplateEcho(rating)) {
-      console.warn(`[evaluator] Rating template echo detected. Raw (first 300 chars): ${raw.slice(0, 300)}`);
+      console.warn(`[evaluator] Audit rating template echo detected. Raw (first 300 chars): ${raw.slice(0, 300)}`);
       return null;
     }
-    return rating;
+    const violations = Array.isArray(parsed.violations) ? parseViolations(parsed.violations as unknown[]) : [];
+    const diagnoses = Array.isArray(parsed.diagnoses) ? parseDiagnoses(parsed.diagnoses as unknown[]) : [];
+    return { violations, diagnoses, rating };
   } catch (err) {
     if (signal?.aborted) throw err;
-    console.warn(`[evaluator] Rating parse failed: ${err instanceof Error ? err.message : String(err)}`);
+    console.warn(`[evaluator] Audit parse failed: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }
 
 /**
- * PASS 2: Generate a prompt rewrite informed by a rating diagnosis.
+ * Generate a targeted fix for ONE specific violation identified by the audit.
  *
- * This is the bridge from "what went wrong" to "how to fix the prompts."
- * The model receives the diagnosis (with quoted lines and prompt traces),
- * the current prompts, mutation history, and plateau context — but NOT
- * the full transcript. Each fix must address a specific diagnosed problem.
+ * The rewriter sees the violation, causal evidence, current prompts, and rules —
+ * but NOT the full transcript. Temperature 0.5 for precision.
  */
-export async function generateRewrite(
+export async function generateTargetedFix(
   config: PromptConfig,
-  rating: RatingResult,
+  audit: AuditResult,
+  targetViolationIndex: number,
   model: string,
   signal?: AbortSignal,
   onToken?: (token: string) => void,
-  eliteConfig?: PromptConfig,
-  eliteScore?: number,
   mutationHistory?: string,
 ): Promise<PromptConfig | null> {
-  const baseConfig = eliteConfig ?? config;
-  const prompts = buildCurrentPrompts(baseConfig);
-  const charNames = buildCharacterNames(baseConfig);
-  const schema = buildPromptsOnlySchema(baseConfig);
+  const violation = audit.violations[targetViolationIndex];
+  if (!violation) return null;
 
-  // Build critique from rating dimensions
-  const critique = (
-    ["emotionalAuthenticity", "naturalDialogue", "dramaticTensionArc", "scenarioCoherence", "organicResolution"] as const
-  )
-    .map((k) => `- ${k}: ${rating[k].score}/10 — ${rating[k].notes}`)
-    .join("\n");
+  const prompts = buildCurrentPrompts(config);
+  const charNames = buildCharacterNames(config);
+  const schema = buildPromptsOnlySchema(config);
 
-  const hasElite = eliteConfig && eliteScore !== undefined;
-
-  let calibration = "";
-  if (hasElite) {
-    calibration = `\nThe best run so far scored ${eliteScore}/50. Keep the PRINCIPLE of what's working but change the execution.\n`;
-  }
-
-  const plateauWarning = hasElite && eliteScore !== undefined && eliteScore >= 30
-    ? `\nPLATEAU WARNING: Current best is ${eliteScore}/50. Incremental tweaks won't break through. Make at least ONE structural change: different emotional register, different power dynamic, different physical environment, or different character psychology.\n`
-    : "";
+  // Find diagnoses that relate to this violation's field
+  const relevantDiagnoses = audit.diagnoses.filter((d) => d.promptFixable);
 
   const historySection = mutationHistory
     ? `\nAPPROACHES ALREADY TRIED (don't repeat these):\n${mutationHistory}\n`
     : "";
 
-  const prompt = `You are a prompt engineer fixing a roleplay scenario based on a critic's diagnosis.
+  const prompt = `You are a prompt engineer making a TARGETED fix to a roleplay scenario.
 
-PERFORMANCE (score: ${rating.total}/50):
-${critique}
-Summary: ${rating.summary}
-${rating.flags.length > 0 ? `Flags: ${rating.flags.join(", ")}` : ""}
+VIOLATION TO FIX:
+- Field: ${violation.field}${violation.characterName ? ` (${violation.characterName})` : ""}
+- Rule broken: ${violation.violation}
+- Offending text: "${violation.quotedText}"
+- Severity: ${violation.severity}
 
-DIAGNOSIS (dramatic weaknesses observed in the transcript):
-${rating.diagnosis || "No specific diagnosis provided — focus on the weakest-scoring dimensions."}
-
-CURRENT PROMPTS (your starting point):
+${relevantDiagnoses.length > 0 ? `CAUSAL EVIDENCE (output problems linked to prompt issues):
+${relevantDiagnoses.map((d) => `- Prompt: "${d.promptQuote}" → Output: "${d.transcriptQuote}" — ${d.explanation}`).join("\n")}
+` : ""}
+CURRENT PROMPTS:
 ${prompts}
-${calibration}${plateauWarning}${historySection}
-YOUR TASK: Based on the dramatic weaknesses described in the diagnosis, infer what in the current prompts is causing these issues and rewrite accordingly. Every change must address a diagnosed problem — don't make cosmetic changes. Preserve character names (${charNames}).
 
 ${REWRITE_RULES}
+${historySection}
+YOUR TASK: Fix ONLY the identified violation. Copy unchanged fields EXACTLY — do not reword, restructure, or "improve" anything that isn't broken. The fix should be surgical: change the minimum text needed to resolve the violation.
+
+Preserve character names (${charNames}). Preserve character roles (character/killer).
 
 Return ONLY valid JSON (no markdown, no preamble):
 ${schema}`;
 
   try {
-    const raw = await callModel(model, prompt, true, signal, onToken, 0.6);
-    const result = tryParsePromptsOnly(raw, baseConfig);
-    if (result) return result;
+    const raw = await callModel(model, prompt, true, signal, onToken, 0.5);
+    const result = tryParsePromptsOnly(raw, config);
+    if (result) {
+      result.name = `${config.name} [targeted_fix]`;
+      return result;
+    }
 
     // Retry with explicit JSON instruction
     const raw2 = await callModel(
@@ -415,10 +460,12 @@ ${schema}`;
       onToken,
       0.5,
     );
-    return tryParsePromptsOnly(raw2, baseConfig);
+    const result2 = tryParsePromptsOnly(raw2, config);
+    if (result2) result2.name = `${config.name} [targeted_fix]`;
+    return result2;
   } catch (err) {
     if (signal?.aborted) throw err;
-    console.warn(`[evaluator] Rewrite generation failed: ${err instanceof Error ? err.message : String(err)}`);
+    console.warn(`[evaluator] Targeted fix failed: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }
@@ -448,7 +495,6 @@ ${tB}
 Which transcript is dramatically superior? Reply with only the letter A or B.`;
 
   try {
-    // Low temperature for deterministic comparison verdicts
     const raw = await callModel(model, prompt, false, signal, undefined, 0.1);
     return raw.trim().toUpperCase().startsWith("A") ? "a" : "b";
   } catch (err) {
@@ -512,7 +558,6 @@ Return ONLY valid JSON (no markdown, no preamble):
 ${schema}`;
 
   try {
-    // Higher temperature for creative exploration
     const raw = await callModel(model, prompt, true, signal, onToken, 1.2);
     const result = tryParsePromptsOnly(raw, parentConfig);
     if (result) return result;

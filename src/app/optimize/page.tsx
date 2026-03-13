@@ -10,6 +10,8 @@ import type {
   GenerationRecord,
 } from "@/lib/types";
 import type { EvolutionPreset } from "@/lib/types";
+import { W95Slider } from "@/components/W95Slider";
+import { fmtDate } from "@/lib/formatDate";
 
 const PRESETS_KEY = "evolutionPresets";
 
@@ -31,30 +33,7 @@ const AGENT_BG = ["#f0f4ff", "#fff2f2", "#e8e8e8", "#f0fff0", "#f8f0ff"];
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function fmtElapsed(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
-  if (h > 0) return `${h}:${String(m % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-  return `${m}:${String(s % 60).padStart(2, "0")}`;
-}
 
-function shortModelName(model: string | null): string {
-  if (!model) return "";
-  // Take the part after the last "/" or show full if no slash
-  const afterSlash = model.includes("/") ? model.split("/").pop()! : model;
-  // Trim tag if it's ":latest"
-  return afterSlash.replace(/:latest$/, "");
-}
-
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function scoreColor(score: number | null): string {
   if (score === null) return "#808080";
@@ -75,64 +54,7 @@ function ScoreBar({ value, max = 10 }: { value: number; max?: number }) {
   );
 }
 
-// ── W95 Slider (matches home page) ────────────────────────────────────────────
 
-function W95Slider({
-  min, max, step, value, onChange,
-}: {
-  min: number; max: number; step: number; value: number; onChange: (v: number) => void;
-}) {
-  const trackRef = useRef<HTMLDivElement>(null);
-
-  function valueFromClientX(clientX: number) {
-    const rect = trackRef.current!.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const raw = min + pct * (max - min);
-    return parseFloat((Math.round(raw / step) * step).toFixed(2));
-  }
-
-  function onMouseDown(e: React.MouseEvent) {
-    e.preventDefault();
-    onChange(valueFromClientX(e.clientX));
-    const onMove = (ev: MouseEvent) => onChange(valueFromClientX(ev.clientX));
-    const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }
-
-  const pct = ((value - min) / (max - min)) * 100;
-
-  return (
-    <div
-      ref={trackRef}
-      onMouseDown={onMouseDown}
-      style={{
-        position: "relative", height: 24, flex: 1,
-        display: "flex", alignItems: "center", cursor: "pointer", userSelect: "none",
-      }}
-    >
-      <div style={{
-        position: "absolute", left: 0, right: 0, height: 4,
-        background: "#808080",
-        borderTop: "1px solid #404040", borderLeft: "1px solid #404040",
-        borderBottom: "1px solid #ffffff", borderRight: "1px solid #ffffff",
-      }} />
-      <div style={{
-        position: "absolute",
-        left: `${pct}%`,
-        transform: "translateX(-50%)",
-        width: 11, height: 21,
-        background: "#c0c0c0",
-        borderStyle: "solid", borderWidth: 2,
-        borderColor: "#ffffff #808080 #808080 #ffffff",
-        boxSizing: "border-box",
-      }} />
-    </div>
-  );
-}
 
 // ── Mutation badge ─────────────────────────────────────────────────────────────
 
@@ -629,12 +551,6 @@ export default function OptimizePage() {
   interface EvaluatorBlock { phase: string; content: string; }
   const [completedEvalBlocks, setCompletedEvalBlocks] = useState<EvaluatorBlock[]>([]);
 
-  // Ollama model status
-  const [ollamaModel, setOllamaModel] = useState<string | null>(null);
-  const [ollamaRole, setOllamaRole] = useState<string | null>(null);
-  const [ollamaModelStartedAt, setOllamaModelStartedAt] = useState<number | null>(null);
-  const [ollamaElapsed, setOllamaElapsed] = useState<number>(0);
-
   // Drill-down navigation
   const [drillJobId, setDrillJobId] = useState<string | null>(null);
   const [drillJobDetail, setDrillJobDetail] = useState<{ job: OptimizationJob; generations: GenerationRecord[] } | null>(null);
@@ -656,15 +572,6 @@ export default function OptimizePage() {
   const isDraggingDivider = useRef(false);
   const handleEventRef = useRef<((event: OptimizationEvent) => void) | null>(null);
   const stoppingRef = useRef(false);
-
-  // Elapsed timer for active model
-  useEffect(() => {
-    if (!ollamaModelStartedAt) { setOllamaElapsed(0); return; }
-    const tick = () => setOllamaElapsed(Date.now() - ollamaModelStartedAt);
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [ollamaModelStartedAt]);
 
   // ── preset helpers ───────────────────────────────────────────────────────────
 
@@ -918,9 +825,6 @@ export default function OptimizePage() {
           if (prev.status === "error" || prev.status === "stopped") return prev;
           return { ...prev, status: "complete" };
         });
-        setOllamaModel(null);
-        setOllamaRole(null);
-        setOllamaModelStartedAt(null);
         setIsEvaluating(false);
         loadJobs();
         if (activeJobId) {
@@ -940,21 +844,6 @@ export default function OptimizePage() {
         loadJobs();
         break;
 
-      case "ollama_status":
-        if (event.ollamaAction === "start") {
-          setOllamaModel(event.ollamaModel ?? null);
-          setOllamaRole(event.ollamaRole ?? null);
-          setOllamaModelStartedAt(Date.now());
-          if (event.ollamaRole === "rewrite") {
-            setEvaluatorTokens("");
-            setIsEvaluating(true);
-          }
-        } else if (event.ollamaAction === "unload") {
-          setOllamaModel(null);
-          setOllamaRole(null);
-          setOllamaModelStartedAt(null);
-        }
-        break;
     }
   }
 
@@ -1066,22 +955,8 @@ export default function OptimizePage() {
 
   return (
     <div
-      style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column", background: "#c0c0c0" }}
-      className="w95-raise"
+      style={{ flex: 1, display: "flex", flexDirection: "column", background: "#c0c0c0", minHeight: 0, overflow: "hidden" }}
     >
-      {/* Title Bar */}
-      <div className="w95-titlebar">
-        <a href="/" style={{ textDecoration: "none" }}>
-          <button className="w95-winbtn" title="Back to Arena">←</button>
-        </a>
-        <span style={{ marginLeft: 4 }}>Agent Arena — Evolve</span>
-        <div className="w95-winctrls">
-          <button className="w95-winbtn">_</button>
-          <button className="w95-winbtn">□</button>
-          <button className="w95-winbtn">✕</button>
-        </div>
-      </div>
-
       {/* Main layout */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
 
@@ -1180,7 +1055,7 @@ export default function OptimizePage() {
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={{ display: "block", marginBottom: 1 }}>
                   Evolution Model <span style={{ fontSize: 9, color: "#666" }}>(rates + mutates)</span>
-                  {modelsLoading && <span style={{ fontSize: 9, color: "#886600", marginLeft: 6 }}>starting ollama...</span>}
+                  {modelsLoading && <span style={{ fontSize: 9, color: "#886600", marginLeft: 6 }}>loading models...</span>}
                 </label>
                 <select
                   className="w95-select"
@@ -1300,35 +1175,6 @@ export default function OptimizePage() {
               </span>
             )}
             <span style={{ flex: 1 }} />
-            {/* Ollama model status */}
-            <span style={{ display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", flexShrink: 0 }}>
-              <span style={{
-                width: 7, height: 7, borderRadius: "50%",
-                background: ollamaModel ? "#00aa00" : "#808080",
-                flexShrink: 0,
-                boxShadow: ollamaModel ? "0 0 3px #00cc00" : "none",
-              }} />
-              {ollamaModel ? (
-                <>
-                  <span style={{ fontWeight: "bold", letterSpacing: 0.3 }}>{shortModelName(ollamaModel)}</span>
-                  {ollamaRole && (
-                    <span style={{
-                      background: ollamaRole === "character" ? "#000080" : ollamaRole === "judge" ? "#800000" : "#006600",
-                      color: "#fff",
-                      padding: "0 3px",
-                      fontSize: 9,
-                      fontWeight: "bold",
-                      letterSpacing: 0.5,
-                    }}>
-                      {ollamaRole.toUpperCase()}
-                    </span>
-                  )}
-                  <span style={{ color: "#444" }}>{fmtElapsed(ollamaElapsed)}</span>
-                </>
-              ) : (
-                <span style={{ color: "#808080", opacity: 0.6 }}>idle</span>
-              )}
-            </span>
             {/* Status message */}
             <span style={{
               borderLeft: "1px solid #808080",

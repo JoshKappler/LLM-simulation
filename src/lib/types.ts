@@ -30,16 +30,11 @@ export interface PromptConfig {
   agentB?: AgentConfig;
 }
 
-export interface OllamaChunk {
+export interface ChatChunk {
   type?: string;
   retryMs?: number;
   retrySecs?: number;
   message?: { role: string; content: string };
-  done: boolean;
-}
-
-export interface OllamaGenerateChunk {
-  response: string;
   done: boolean;
 }
 
@@ -50,14 +45,6 @@ export interface ChatRequest {
   temperature: number;
   numPredict?: number;
   minP?: number;
-  stop?: string[];
-}
-
-export interface GenerateRequest {
-  model: string;
-  system: string;
-  prompt: string;
-  temperature: number;
   stop?: string[];
 }
 
@@ -117,6 +104,27 @@ export interface RatingResult {
   diagnosis: string; // 2-3 weakest moments: quoted lines traced to prompt problems
 }
 
+export interface PromptViolation {
+  field: string;
+  characterName?: string;
+  violation: string;
+  quotedText: string;
+  severity: "minor" | "moderate" | "critical";
+}
+
+export interface CausalDiagnosis {
+  promptQuote: string;
+  transcriptQuote: string;
+  explanation: string;
+  promptFixable: boolean;
+}
+
+export interface AuditResult {
+  violations: PromptViolation[];
+  diagnoses: CausalDiagnosis[];
+  rating: RatingResult;
+}
+
 export type MutationField =
   | "situation"
   | "character_0"
@@ -126,6 +134,7 @@ export type MutationField =
   | "seed"
   | "crossover"
   | "rewrite"
+  | "targeted_fix"
   | "explore"
   | "parent_copy";
 
@@ -144,6 +153,7 @@ export interface RatedConfig {
   isCarryover?: boolean;
   effectiveScore?: number;
   changeDescription?: string; // brief summary of what changed vs parent
+  audit?: AuditResult; // prompt compliance audit + causal diagnosis
 }
 
 export interface GenerationRecord {
@@ -171,7 +181,7 @@ export interface OptimizationJob {
   mutationModel: string;
   characterModel?: string; // overrides model for all roleplay agents; falls back to config's own model
   population: RatedConfig[]; // top 10 all-time by score
-  pendingRewrites?: PromptConfig[]; // diagnosis-informed rewrites from generateRewrite, used as variants in next gen
+  pendingRewrites?: PromptConfig[]; // targeted fixes from auditAndRate, used as variants in next gen
   stopFlag?: boolean;
   lastError?: string;
 }
@@ -187,7 +197,6 @@ export interface OptimizationEvent {
     | "generation_complete"
     | "job_complete"
     | "error"
-    | "ollama_status"
     | "evaluator_token";
   jobId: string;
   generation?: number;
@@ -200,10 +209,6 @@ export interface OptimizationEvent {
   rating?: RatingResult | null;
   elite?: { total: number; summary: string; mutationField: MutationField };
   message?: string;
-  // ollama_status fields
-  ollamaModel?: string;
-  ollamaRole?: string; // "character" | "judge" | "rewrite"
-  ollamaAction?: "start" | "unload";
   // evaluator_token fields
   token?: string;
   phase?: string; // "evaluate" | "bootstrap" — which evaluator phase is streaming

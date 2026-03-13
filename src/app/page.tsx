@@ -1136,18 +1136,7 @@ export default function Home() {
   // ── render ────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column", background: "#c0c0c0" }}
-      className="w95-raise">
-
-      {/* Title Bar */}
-      <div className="w95-titlebar">
-        <span>Agent Arena</span>
-        <div className="w95-winctrls">
-          <button className="w95-winbtn">_</button>
-          <button className="w95-winbtn">□</button>
-          <button className="w95-winbtn">✕</button>
-        </div>
-      </div>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#c0c0c0", minHeight: 0, overflow: "hidden" }}>
 
       {/* Main area: chat + sidebar */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>

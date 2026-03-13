@@ -1,16 +1,18 @@
 /**
  * Orchestrator — manages the full optimization generation loop.
  *
- * Generation 0 runs the seed config ONCE, rates it, then generates a
- * diagnosis-informed rewrite (stored in pendingRewrites for gen 1).
+ * Generation 0 runs the seed config ONCE, audits+rates it, then generates
+ * targeted fixes (stored in pendingRewrites for gen 1).
  *
  * Subsequent generations:
- *   1. BUILD VARIANTS:  Slot 0 = elite carryover. Slots 1..K = pendingRewrites
- *      from previous gen. Remaining = exploration mutations.
- *   2. RUN:  Execute all new variant conversations.
- *   3. RATE:  For each variant, rate the transcript (Pass 1 — judge model).
- *   4. REWRITE:  For each rated variant, generate a rewrite (Pass 2 — mutation model).
- *   5. SELECTION:  Pick winner, update population, store rewrites.
+ *   1. BUILD VARIANTS:  Slots 0..K = pendingRewrites (targeted fixes from
+ *      previous gen's audit). Remaining = exploration mutations. NO carryover
+ *      slot — the elite's existing score is used for comparison directly.
+ *   2. RUN:  Execute all variant conversations (only new variants, never re-run elite).
+ *   3. RATE:  For each variant, audit+rate the transcript.
+ *   4. FIX:  For each rated variant, generate targeted fixes for top violations.
+ *   5. SELECTION:  Compare new variants against elite's stored score, update population.
+ *      If elite wins again, generate new targeted fixes from ITS audit.
  */
 
 import { readFile, writeFile, mkdir, appendFile } from "fs/promises";
@@ -23,9 +25,10 @@ import type {
   GenerationRecord,
   MutationField,
   ConversationTurn,
+  AuditResult,
 } from "../types";
 import { runHeadless } from "./executor";
-import { rateTranscript, generateRewrite, generateExploreMutation, compareTranscripts } from "./evaluator";
+import { auditAndRate, generateTargetedFix, generateExploreMutation, compareTranscripts } from "./evaluator";
 import { emitJobEvent, cleanupJobBus } from "./eventBus";
 import { unregisterJob } from "./jobRegistry";
 
@@ -160,7 +163,6 @@ async function executeVariantRun(
   const configForRun = applyCharacterModel(config, job.characterModel);
   const runId = String(Date.now());
 
-  // Killer fires first (primer), then every 5th turn (4 character turns between).
   const killerThreshold = 0;
 
   const doRun = () =>
@@ -225,7 +227,6 @@ async function executeVariantRun(
     turnCount: result.turns.length,
   });
 
-  // Log run errors as events so the UI can display them
   if (result.terminationReason === "error") {
     emit(jobId, {
       type: "error",
@@ -269,7 +270,6 @@ async function writeGenRecord(
 
 // ── Mutation history ────────────────────────────────────────────────────────────
 
-/** Compute a brief description of what changed between two configs */
 function computeChangeDescription(variant: PromptConfig, parent: PromptConfig): string {
   const changes: string[] = [];
   if ((variant.situation ?? "") !== (parent.situation ?? "")) changes.push("situation rewritten");
@@ -296,10 +296,9 @@ function buildMutationHistory(population: RatedConfig[], currentEliteRunId?: str
 
   return entries
     .map((e) => {
-      const strategy = e.mutationField === "explore" ? "explore" : e.mutationField === "rewrite" ? "transcript-rewrite" : "refine";
+      const strategy = e.mutationField === "explore" ? "explore" : e.mutationField === "targeted_fix" ? "targeted-fix" : e.mutationField === "rewrite" ? "transcript-rewrite" : "refine";
       const score = e.effectiveScore ?? e.rating?.total ?? 0;
       const desc = e.changeDescription ?? "unknown changes";
-      // Find top-2 weakest dimensions with scores and notes
       let weakDims = "";
       if (e.rating) {
         const dims = [
@@ -321,14 +320,10 @@ function buildMutationHistory(population: RatedConfig[], currentEliteRunId?: str
 
 // ── Main job runner ────────────────────────────────────────────────────────────
 
-/** Build a transcript excerpt (~10 representative turns) from a run's turns.
- *  Prioritizes the LONGEST turns (most problematic for verbosity) while keeping
- *  some evenly-spaced turns for context. Includes word counts per turn. */
 function buildTranscriptExcerpt(turns: ConversationTurn[], maxTurns = 10): string {
   const filtered = turns.filter((t) => !t.isStreaming && t.content.trim());
   if (filtered.length === 0) return "";
 
-  // If we have fewer turns than max, use all of them
   if (filtered.length <= maxTurns) {
     return filtered
       .map((t) => {
@@ -338,23 +333,19 @@ function buildTranscriptExcerpt(turns: ConversationTurn[], maxTurns = 10): strin
       .join("\n");
   }
 
-  // Reserve half the slots for longest turns, half for evenly-spaced context
   const longestSlots = Math.ceil(maxTurns / 2);
   const contextSlots = maxTurns - longestSlots;
 
-  // Get indices of longest turns
   const byLength = filtered
     .map((t, i) => ({ i, wc: t.content.trim().split(/\s+/).length }))
     .sort((a, b) => b.wc - a.wc);
   const longestIndices = new Set(byLength.slice(0, longestSlots).map((x) => x.i));
 
-  // Get evenly-spaced indices for context (skip ones already selected)
   const step = Math.max(1, Math.floor(filtered.length / (contextSlots + 1)));
   for (let i = 0; i < filtered.length && longestIndices.size < maxTurns; i += step) {
     longestIndices.add(i);
   }
 
-  // Sort by original order
   const selectedIndices = Array.from(longestIndices).sort((a, b) => a - b).slice(0, maxTurns);
 
   return selectedIndices
@@ -366,23 +357,61 @@ function buildTranscriptExcerpt(turns: ConversationTurn[], maxTurns = 10): strin
     .join("\n");
 }
 
+/** Generate targeted fixes from an audit, returning up to maxFixes configs */
+async function generateFixesFromAudit(
+  config: PromptConfig,
+  audit: AuditResult,
+  maxFixes: number,
+  model: string,
+  jobId: string,
+  signal?: AbortSignal,
+  mutationHistory?: string,
+): Promise<PromptConfig[]> {
+  const fixes: PromptConfig[] = [];
+  // Only target prompt-fixable violations, sorted by severity
+  const severityOrder = { critical: 0, moderate: 1, minor: 2 };
+  const targetable = audit.violations
+    .map((v, i) => ({ v, i }))
+    .sort((a, b) => severityOrder[a.v.severity] - severityOrder[b.v.severity]);
+
+  for (let fi = 0; fi < Math.min(targetable.length, maxFixes); fi++) {
+    if (signal?.aborted) break;
+    await sleep(INTER_CALL_DELAY_MS, signal);
+    try {
+      const fix = await generateTargetedFix(
+        config,
+        audit,
+        targetable[fi].i,
+        model,
+        signal,
+        (token) => emitLive(jobId, { type: "evaluator_token", jobId, token, phase: "mutate" }),
+        mutationHistory,
+      );
+      if (fix) fixes.push(fix);
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      console.warn(`[orchestrator] Targeted fix ${fi} failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  return fixes;
+}
+
 export async function runOptimizationJob(jobId: string, signal?: AbortSignal): Promise<void> {
   try {
     await ensureJobDir(jobId);
     let job = await readState(jobId);
     let consecutiveFailedGens = 0;
-    let carryoverWinStreak = 0;
 
     while (job.currentGeneration < job.maxGenerations && !stopped(job, signal)) {
       const genIndex = job.currentGeneration;
       const genStarted = new Date().toISOString();
+      const characterModel = job.characterModel ?? job.seedConfig.characters?.[0]?.model ?? "unknown";
 
       // ════════════════════════════════════════════════════════════════════════
-      // GEN 0 — BASELINE: Run seed config once, evaluate, establish baseline
+      // GEN 0 — BASELINE: Run seed config once, audit+rate, generate targeted fixes
       // ════════════════════════════════════════════════════════════════════════
 
       if (genIndex === 0) {
-        // Write initial empty gen record so UI shows generation immediately
         await writeGenRecord(jobId, 0, genStarted, [], 0);
 
         emit(jobId, {
@@ -399,16 +428,19 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
 
         if (stopped(job, signal)) break;
 
-        // Pass 1: Rate baseline transcript
+        // Audit + Rate baseline transcript
         await sleep(INTER_CALL_DELAY_MS, signal);
 
-        let rating = null;
-        let baselineRewrite: PromptConfig | null = null;
+        let audit: AuditResult | null = null;
+        const pendingFixes: PromptConfig[] = [];
+
         if (runResult.terminationReason !== "error" && runResult.turns.length >= 2) {
           try {
-            rating = await rateTranscript(
+            audit = await auditAndRate(
               runResult.turns,
+              job.seedConfig,
               job.judgeModel,
+              characterModel,
               signal,
               (token) => emitLive(jobId, { type: "evaluator_token", jobId, token, phase: "evaluate" }),
             );
@@ -416,27 +448,19 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
             if (signal?.aborted) throw err;
           }
 
-          // Pass 2: Generate rewrite based on diagnosis
-          if (rating && !stopped(job, signal)) {
-            await sleep(INTER_CALL_DELAY_MS, signal);
-            try {
-              baselineRewrite = await generateRewrite(
-                job.seedConfig,
-                rating,
-                job.mutationModel,
-                signal,
-                (token) => emitLive(jobId, { type: "evaluator_token", jobId, token, phase: "mutate" }),
-              );
-            } catch (err) {
-              if (signal?.aborted) throw err;
-              console.warn(`[orchestrator] Baseline rewrite failed: ${err instanceof Error ? err.message : String(err)}`);
-            }
+          // Generate targeted fixes for top violations
+          if (audit && audit.violations.length > 0 && !stopped(job, signal)) {
+            const maxFixes = Math.ceil(job.variantsPerGeneration / 2);
+            const fixes = await generateFixesFromAudit(
+              job.seedConfig, audit, maxFixes, job.mutationModel, jobId, signal,
+            );
+            pendingFixes.push(...fixes);
           }
         }
 
-        // Store the diagnosis-informed rewrite for gen 1
-        job.pendingRewrites = baselineRewrite ? [baselineRewrite] : [];
+        job.pendingRewrites = pendingFixes;
 
+        const rating = audit?.rating ?? null;
         const rawScore = rating !== null ? (rating.total ?? 0) : -1;
         const effectiveScore =
           rating === null ? -1 : computeEffectiveScore(rawScore, runResult.turns.length, runResult.terminationReason);
@@ -455,6 +479,7 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
           terminationReason: runResult.terminationReason,
           isCarryover: false,
           effectiveScore,
+          audit: audit ?? undefined,
         };
 
         job.population = updatePopulation(job.population, baseline);
@@ -478,10 +503,8 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
             : undefined,
         });
 
-        // Check stop after evaluation completes — prevents starting gen 1
         if (stopped(job, signal)) break;
 
-        // Track failures
         if (runResult.terminationReason === "error") {
           consecutiveFailedGens++;
         } else {
@@ -509,98 +532,55 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
 
       // ════════════════════════════════════════════════════════════════════════
       // GEN 1+ — EVOLUTION CYCLE
+      // No carryover slot. Elite's stored score competes as-is.
+      // Only genuinely new variants consume resources.
       // ════════════════════════════════════════════════════════════════════════
 
       const elite = getElite(job.population);
       const parentConfig = elite?.config ?? job.seedConfig;
-      const critique = elite?.rating ?? null; // Mutations are INFORMED by this
+      const critique = elite?.rating ?? null;
 
       // ── Phase 1: BUILD VARIANTS ──────────────────────────────────────────
-      // Variant 0 = elite carryover.
-      // Variants 1..K = pendingRewrites from previous gen (transcript-informed).
-      // Variants K+1..N-1 = exploration mutations (creative leaps).
+      // Slots 0..K = pendingRewrites (targeted fixes from previous gen).
+      // Slots K+1..N-1 = exploration mutations (creative leaps).
+      // NO carryover slot.
 
       interface VariantSlot {
         config: PromptConfig;
-        isCarryover: boolean;
         mutationField: MutationField;
       }
 
-      // Write initial empty gen record so UI shows generation immediately
       await writeGenRecord(jobId, genIndex, genStarted, [], 0);
 
       const variantSlots: VariantSlot[] = [];
-
-      // Variant 0: elite carryover (or seed if no rated elite)
-      if (elite && elite.rating !== null) {
-        variantSlots.push({ config: elite.config, isCarryover: true, mutationField: "seed" });
-        emit(jobId, {
-          type: "mutation_complete",
-          jobId,
-          generation: genIndex,
-          variant: 0,
-          mutationField: "seed",
-          isCarryover: true,
-        });
-      } else {
-        variantSlots.push({
-          config: JSON.parse(JSON.stringify(job.seedConfig)) as PromptConfig,
-          isCarryover: false,
-          mutationField: "seed",
-        });
-        emit(jobId, {
-          type: "mutation_complete",
-          jobId,
-          generation: genIndex,
-          variant: 0,
-          mutationField: "seed",
-        });
-      }
-
-      // Fill from pendingRewrites (diagnosis-informed rewrites from previous gen)
-      // Cap rewrite slots to guarantee explore slots get filled
       const mutationHistoryStr = buildMutationHistory(job.population, elite?.runId);
-      const slotsRemaining = job.variantsPerGeneration - 1; // minus carryover
 
-      // Plateau detection: if carryover has won >= 2 gens, skip rewrites entirely
-      const inPlateau = carryoverWinStreak >= 2;
-      if (inPlateau) {
-        console.log(`[orchestrator] Plateau detected (carryover won ${carryoverWinStreak} gens straight) — switching to full exploration`);
-        emit(jobId, {
-          type: "error",
-          jobId,
-          message: `Plateau detected: carryover won ${carryoverWinStreak} consecutive generations. Switching ALL slots to exploration mutations.`,
-        });
-      }
-
-      const maxRewriteSlots = inPlateau ? 0 : Math.ceil((job.variantsPerGeneration - 1) / 2);
+      // Fill from pendingRewrites (targeted fixes from previous gen's audit)
+      const maxRewriteSlots = Math.ceil(job.variantsPerGeneration / 2);
       const rawRewrites = job.pendingRewrites ?? [];
 
-      // Filter out "no changes detected" rewrites and cap at maxRewriteSlots
       const validRewrites = rawRewrites.filter((rw) => {
         const desc = computeChangeDescription(rw, parentConfig);
         return desc !== "no changes detected";
       });
-      const rewriteSlots = Math.min(validRewrites.length, maxRewriteSlots, slotsRemaining);
+      const rewriteSlots = Math.min(validRewrites.length, maxRewriteSlots, job.variantsPerGeneration);
 
       for (let ri = 0; ri < rewriteSlots; ri++) {
         const vi = variantSlots.length;
         variantSlots.push({
           config: validRewrites[ri],
-          isCarryover: false,
-          mutationField: "rewrite",
+          mutationField: "targeted_fix",
         });
         emit(jobId, {
           type: "mutation_complete",
           jobId,
           generation: genIndex,
           variant: vi,
-          mutationField: "rewrite",
+          mutationField: "targeted_fix",
         });
       }
 
       // Fill remaining slots with exploration mutations
-      // Build transcript excerpt from elite's turns for explore mutations
       const eliteTranscriptExcerpt = elite?.turns ? buildTranscriptExcerpt(elite.turns) : undefined;
 
       for (let vi = variantSlots.length; vi < job.variantsPerGeneration; vi++) {
@@ -641,7 +621,6 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
         }
         variantSlots.push({
           config: mutated ?? (JSON.parse(JSON.stringify(parentConfig)) as PromptConfig),
-          isCarryover: false,
           mutationField: resolvedField,
         });
 
@@ -657,47 +636,31 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
       if (stopped(job, signal)) break;
 
       // ── Phase 2: RUN ──────────────────────────────────────────────────────
-      // Execute all variant conversations. Skip carryovers.
+      // Execute all variant conversations. All are new — no carryover.
 
       const runSlots: (RunResult | null)[] = [];
-      // Track partial results for incremental gen record writes
       const inProgressVariants: RatedConfig[] = [];
 
       for (let vi = 0; vi < variantSlots.length; vi++) {
-        // Re-read state to check stop flag
         try { job = await readState(jobId); } catch { /* use existing */ }
         if (stopped(job, signal)) {
           runSlots.push(null);
           continue;
         }
 
-        const slot = variantSlots[vi];
-
-        // Carryover: reuse elite's stored turns — no re-run needed
-        if (slot.isCarryover && elite) {
-          runSlots.push({
-            turns: elite.turns,
-            terminationReason: elite.terminationReason ?? "max_turns",
-            runId: elite.runId,
-          });
-          inProgressVariants.push({ ...elite, isCarryover: true, generationIndex: genIndex, variantIndex: vi });
-          continue;
-        }
-
-        // Delay between runs to avoid rate limits
+        // Delay between runs
         if (runSlots.some((r) => r !== null)) {
           await sleep(INTER_CALL_DELAY_MS, signal);
         }
 
         emit(jobId, { type: "run_start", jobId, generation: genIndex, variant: vi });
-        const runResult = await executeVariantRun(jobId, slot.config, job, genIndex, vi, signal);
+        const runResult = await executeVariantRun(jobId, variantSlots[vi].config, job, genIndex, vi, signal);
         runSlots.push(runResult);
 
-        // Write incremental gen record so drill-down shows each variant as it completes
         inProgressVariants.push({
-          config: slot.config, runId: runResult.runId, turns: runResult.turns,
+          config: variantSlots[vi].config, runId: runResult.runId, turns: runResult.turns,
           rating: null, turnCount: runResult.turns.length, generationIndex: genIndex,
-          variantIndex: vi, mutationField: slot.mutationField, mutationQuality: "ok",
+          variantIndex: vi, mutationField: variantSlots[vi].mutationField, mutationQuality: "ok",
           parentConfigName: parentConfig.name, terminationReason: runResult.terminationReason,
           isCarryover: false, effectiveScore: -1,
         });
@@ -706,12 +669,14 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
 
       if (stopped(job, signal)) break;
 
-      // ── Phase 3: RATE ──────────────────────────────────────────────────
-      // For each variant, rate the transcript (Pass 1 — judge model).
+      // ── Phase 3: AUDIT + RATE ─────────────────────────────────────────────
+      // For each variant, audit+rate the transcript.
+      // Collect targeted fixes for next generation.
 
       const variantResults: RatedConfig[] = [];
       const nextGenRewrites: PromptConfig[] = [];
-      const eliteScore = elite?.effectiveScore ?? elite?.rating?.total;
+      let bestNewVariant: RatedConfig | null = null;
+      let bestNewAudit: AuditResult | null = null;
 
       for (let vi = 0; vi < variantSlots.length; vi++) {
         if (stopped(job, signal)) break;
@@ -720,68 +685,30 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
         const run = runSlots[vi];
         if (!run) continue;
 
-        // Carryover: use elite's stored rating
-        if (slot.isCarryover && elite) {
-          const carryover: RatedConfig = {
-            ...elite,
-            isCarryover: true,
-            generationIndex: genIndex,
-            variantIndex: vi,
-          };
-          variantResults.push(carryover);
-          job.population = updatePopulation(job.population, carryover);
-          await writeState(job);
-          await writeGenRecord(jobId, genIndex, genStarted, variantResults, 0);
-          continue;
-        }
-
         // Delay between calls
         if (variantResults.length > 0) {
           await sleep(INTER_CALL_DELAY_MS, signal);
         }
 
-        // Pass 1: Rate the transcript (judge model)
-        let rating = null;
+        // Audit + Rate (combined pass)
+        let audit: AuditResult | null = null;
         if (run.terminationReason !== "error" && run.turns.length >= 2) {
           try {
-            rating = await rateTranscript(
+            audit = await auditAndRate(
               run.turns,
+              slot.config,
               job.judgeModel,
+              characterModel,
               signal,
               (token) => emitLive(jobId, { type: "evaluator_token", jobId, token, phase: "evaluate" }),
             );
           } catch (err) {
             if (signal?.aborted) throw err;
-            console.warn(`[orchestrator] Rating failed (gen ${genIndex} var ${vi}): ${err instanceof Error ? err.message : String(err)}`);
+            console.warn(`[orchestrator] Audit failed (gen ${genIndex} var ${vi}): ${err instanceof Error ? err.message : String(err)}`);
           }
         }
 
-        // Pass 2: Generate rewrite based on diagnosis (mutation model)
-        let rewriteConfig: PromptConfig | null = null;
-        if (rating && !stopped(job, signal)) {
-          await sleep(INTER_CALL_DELAY_MS, signal);
-          try {
-            rewriteConfig = await generateRewrite(
-              slot.config,
-              rating,
-              job.mutationModel,
-              signal,
-              (token) => emitLive(jobId, { type: "evaluator_token", jobId, token, phase: "mutate" }),
-              elite?.config,
-              eliteScore,
-              mutationHistoryStr || undefined,
-            );
-          } catch (err) {
-            if (signal?.aborted) throw err;
-            console.warn(`[orchestrator] Rewrite failed (gen ${genIndex} var ${vi}): ${err instanceof Error ? err.message : String(err)}`);
-          }
-        }
-
-        // Store the rewrite for next generation
-        if (rewriteConfig) {
-          nextGenRewrites.push(rewriteConfig);
-        }
-
+        const rating = audit?.rating ?? null;
         const rawScore = rating !== null ? (rating.total ?? 0) : -1;
         const effectiveScore =
           rating === null ? -1 : computeEffectiveScore(rawScore, run.turns.length, run.terminationReason);
@@ -801,11 +728,18 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
           isCarryover: false,
           effectiveScore,
           changeDescription: computeChangeDescription(slot.config, parentConfig),
+          audit: audit ?? undefined,
         };
 
         variantResults.push(ratedVariant);
         job.population = updatePopulation(job.population, ratedVariant);
         await writeState(job);
+
+        // Track best new variant + its audit for fix generation
+        if (!bestNewVariant || getEffective(ratedVariant) > getEffective(bestNewVariant)) {
+          bestNewVariant = ratedVariant;
+          bestNewAudit = audit;
+        }
 
         const currentBestIdx = variantResults.reduce(
           (bi, v, i) => (getEffective(v) > getEffective(variantResults[bi]) ? i : bi), 0,
@@ -821,12 +755,8 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
         });
       }
 
-      // Store rewrites for next generation
-      job.pendingRewrites = nextGenRewrites;
+      // ── Phase 4: SELECTION + FIX GENERATION ─────────────────────────────
 
-      // ── Phase 4: SELECTION ────────────────────────────────────────────────
-
-      // Check if all variants failed
       const allFailed = variantResults.length === 0 || variantResults.every(
         (v) => v.terminationReason === "error" || v.effectiveScore === -1,
       );
@@ -837,69 +767,90 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
         consecutiveFailedGens = 0;
       }
 
-      // Write generation record even on failure
-      const eliteIndex = variantResults.length > 0
+      // Determine generation winner (among new variants only)
+      const genEliteIndex = variantResults.length > 0
         ? variantResults.reduce(
             (bi, v, i) => (getEffective(v) > getEffective(variantResults[bi]) ? i : bi),
             0,
           )
         : 0;
 
-      // Track carryover win streak for plateau detection
-      const genWinner = variantResults[eliteIndex] ?? null;
-      if (genWinner?.isCarryover) {
-        carryoverWinStreak++;
-      } else {
-        carryoverWinStreak = 0;
-      }
+      const genWinner = variantResults[genEliteIndex] ?? null;
 
-      await writeGenRecord(jobId, genIndex, genStarted, variantResults, eliteIndex, true);
-
-      const genElite = variantResults[eliteIndex] ?? null;
-
-      // Head-to-head comparison when a new variant claims top
+      // Compare best new variant against all-time elite
       const allTimeBest = getElite(job.population);
+      let eliteWon = false;
+
       if (
-        genElite &&
-        !genElite.isCarryover &&
+        genWinner &&
         allTimeBest &&
-        genElite.runId !== allTimeBest.runId &&
-        getEffective(genElite) > getEffective(allTimeBest)
+        genWinner.runId !== allTimeBest.runId &&
+        getEffective(genWinner) > getEffective(allTimeBest)
       ) {
+        // New variant claims top — head-to-head comparison
         try {
           await sleep(INTER_CALL_DELAY_MS, signal);
           const winner = await compareTranscripts(
-            genElite.turns,
-            genElite.config.name,
+            genWinner.turns,
+            genWinner.config.name,
             allTimeBest.turns,
             allTimeBest.config.name,
             job.judgeModel,
             signal,
           );
           if (winner === "b") {
-            const idx = job.population.findIndex((v) => v.runId === genElite.runId);
+            // Elite defended — demote new variant
+            const idx = job.population.findIndex((v) => v.runId === genWinner.runId);
             if (idx >= 0) {
               job.population[idx] = {
                 ...job.population[idx],
                 effectiveScore: Math.max(0, getEffective(allTimeBest) - 1),
               };
             }
+            eliteWon = true;
           }
           await writeState(job);
         } catch (err) {
           if (signal?.aborted) throw err;
         }
+      } else if (allTimeBest && genWinner && getEffective(genWinner) <= getEffective(allTimeBest)) {
+        // Elite's stored score beat all new variants outright
+        eliteWon = true;
       }
+
+      // Generate targeted fixes for next generation
+      // If elite won again, generate fixes from the elite's audit (if available)
+      // Otherwise, generate fixes from the best new variant's audit
+      if (!stopped(job, signal) && !allFailed) {
+        const fixSource = eliteWon && allTimeBest?.audit
+          ? { config: allTimeBest.config, audit: allTimeBest.audit }
+          : bestNewAudit
+            ? { config: bestNewVariant!.config, audit: bestNewAudit }
+            : null;
+
+        if (fixSource && fixSource.audit.violations.length > 0) {
+          const maxFixes = Math.ceil(job.variantsPerGeneration / 2);
+          const fixes = await generateFixesFromAudit(
+            fixSource.config, fixSource.audit, maxFixes,
+            job.mutationModel, jobId, signal, mutationHistoryStr || undefined,
+          );
+          nextGenRewrites.push(...fixes);
+        }
+      }
+
+      job.pendingRewrites = nextGenRewrites;
+
+      await writeGenRecord(jobId, genIndex, genStarted, variantResults, genEliteIndex, true);
 
       emit(jobId, {
         type: "generation_complete",
         jobId,
         generation: genIndex,
-        elite: genElite?.rating
+        elite: genWinner?.rating
           ? {
-              total: genElite.rating.total,
-              summary: genElite.rating.summary,
-              mutationField: genElite.mutationField,
+              total: genWinner.rating.total,
+              summary: genWinner.rating.summary,
+              mutationField: genWinner.mutationField,
             }
           : undefined,
       });
@@ -909,7 +860,6 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
 
       // Abort on catastrophic failure
       if (consecutiveFailedGens >= CONSECUTIVE_FAIL_LIMIT) {
-        const lastError = variantResults.find((v) => v.terminationReason === "error");
         job.status = "error";
         job.lastError = `Aborted: ${consecutiveFailedGens} consecutive generations all failed. Check API key and model availability.`;
         job.completedAt = new Date().toISOString();
@@ -921,7 +871,7 @@ export async function runOptimizationJob(jobId: string, signal?: AbortSignal): P
         return;
       }
 
-      // Re-read state for next iteration (picks up external stop flag changes)
+      // Re-read state for next iteration
       job = await readState(jobId);
     }
 
