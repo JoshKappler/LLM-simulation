@@ -1,4 +1,21 @@
 /**
+ * Strips think/reasoning blocks emitted by various models.
+ * Pass `partial: true` during streaming to replace unclosed blocks with "…".
+ */
+export function stripThinkBlocks(text: string, partial = false): string {
+  let out = text;
+  out = out.replace(/<think>[\s\S]*?<\/think>/gi, "");
+  out = out.replace(/<\|thinking\|>[\s\S]*?<\|\/thinking\|>/gi, "");
+  out = out.replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, "");
+  // Unclosed blocks: replace with ellipsis during streaming, strip entirely when done
+  const tail = partial ? "…" : "";
+  out = out.replace(/<think>[\s\S]*/i, tail);
+  out = out.replace(/<\|thinking\|>[\s\S]*/i, tail);
+  out = out.replace(/<reasoning>[\s\S]*/i, tail);
+  return out;
+}
+
+/**
  * Cleans raw model output before storing or displaying.
  * Extracted from page.tsx so server-side code can share this logic.
  */
@@ -7,15 +24,7 @@ export function cleanOutput(
   speakerName: string,
   allNames: string[],
 ): string {
-  let text = raw;
-
-  // Strip think/reasoning blocks (various model formats)
-  text = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
-  text = text.replace(/<think>[\s\S]*/i, "");
-  text = text.replace(/<\|thinking\|>[\s\S]*?<\|\/thinking\|>/gi, "");
-  text = text.replace(/<\|thinking\|>[\s\S]*/i, "");
-  text = text.replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, "");
-  text = text.replace(/<reasoning>[\s\S]*/i, "");
+  let text = stripThinkBlocks(raw);
 
   // Strip own-name prefix: "Alex: I can't believe..." → "I can't believe..."
   const nameEscaped = speakerName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

@@ -442,3 +442,70 @@ body {
   padding: 6px 10px;
   font-style: normal;
 }
+
+/* ── Win95 range/slider (trackbar) ───────────────────────── */
+.w95-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.w95-range::-webkit-slider-runnable-track {
+  height: 4px;
+  background: #808080;
+  border-style: solid;
+  border-width: 1px;
+  border-color: #404040 #dfdfdf #dfdfdf #404040;
+  margin: 0;
+}
+.w95-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 20px;
+  background: #c0c0c0;
+  border-style: solid;
+  border-width: 2px;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  margin-top: -9px;
+  cursor: pointer;
+}
+.w95-range::-webkit-slider-thumb:active {
+  border-color: #808080 #ffffff #ffffff #808080;
+}
+.w95-range::-moz-range-track {
+  height: 4px;
+  background: #808080;
+  border-style: solid;
+  border-width: 1px;
+  border-color: #404040 #dfdfdf #dfdfdf #404040;
+}
+.w95-range::-moz-range-thumb {
+  width: 11px;
+  height: 20px;
+  background: #c0c0c0;
+  border-style: solid;
+  border-width: 2px;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  border-radius: 0;
+  cursor: pointer;
+}
+.w95-range::-moz-range-thumb:active {
+  border-color: #808080 #ffffff #ffffff #808080;
+}
+
+/* ── LifeSim control panel rows ──────────────────────────── */
+.lifesim-ctrl-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.lifesim-ctrl-label {
+  width: 42px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #000;
+}

@@ -6,11 +6,11 @@ Two LLM agents run an automated back-and-forth roleplay conversation against eac
 
 ## What You Need
 
-There are three things to install before this project will run:
+There are two things to install, plus a Groq API key:
 
 1. **Node.js** — runs the web app
 2. **npm** — installs the app's dependencies (comes bundled with Node.js)
-3. **Ollama** — runs the AI models locally on your machine
+3. **Groq API key** — provides LLM inference via the Groq cloud API
 
 ---
 
@@ -49,84 +49,21 @@ Both should print version numbers.
 
 ---
 
-## Step 2 — Install Ollama
+## Step 2 — Get a Groq API Key
 
-Ollama runs AI models locally. It handles all the inference — the web app talks to it over a local API.
+Sign up at [console.groq.com](https://console.groq.com) and create an API key.
 
-**Mac:**
+Create a file called `.env.local` in the project root with:
 
-Download the Mac app from [ollama.com](https://ollama.com/download). Open the downloaded `.zip`, drag Ollama to your Applications folder, and launch it. You'll see an Ollama icon appear in your menu bar.
-
-Or install via Homebrew:
-
-```bash
-brew install ollama
+```
+GROQ_API_KEY=gsk_your_key_here
 ```
 
-Then start the server:
-
-```bash
-ollama serve
-```
-
-**Windows:**
-
-Download the Windows installer from [ollama.com](https://ollama.com/download) and run it. Ollama will start automatically and run in the system tray. If it doesn't start, open it from the Start menu.
-
-**Verify Ollama is running:**
-
-Open a browser and go to `http://localhost:11434`. You should see plain text that says `Ollama is running`.
+The app uses Groq's OpenAI-compatible API for all LLM calls. Models available through Groq (like `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, etc.) will appear in the model selector automatically.
 
 ---
 
-## Step 3 — Pull Models
-
-Ollama needs to download models before you can use them. Models are large files (several gigabytes each) stored locally on your machine.
-
-Open a terminal (Terminal on Mac, Command Prompt or PowerShell on Windows) and run:
-
-```bash
-ollama pull huihui_ai/qwen3.5-abliterated
-```
-
-This is the recommended model for this project. It handles roleplay well and follows character prompts naturally. The download is around 8GB — wait for it to finish before starting the app.
-
-**Other models you can try:**
-
-```bash
-ollama pull gemma3:27b
-```
-
-Good for analytical tasks (the optimizer's judge/mutation calls). Not recommended as a roleplay character model.
-
-```bash
-ollama pull llama3.2
-```
-
-A smaller 3B model. Fast, but output quality for roleplay is low.
-
-**To see all models you've downloaded:**
-
-```bash
-ollama list
-```
-
-**To remove a model:**
-
-```bash
-ollama rm model-name
-```
-
-**Model storage location:**
-
-- Mac: `~/.ollama/models`
-- Windows: `C:\Users\<you>\.ollama\models`
-
-Make sure you have enough disk space before pulling large models.
-
----
-
-## Step 4 — Clone or Download This Project
+## Step 3 — Clone or Download This Project
 
 If you have Git installed:
 
@@ -139,7 +76,7 @@ Or download the ZIP from GitHub and extract it, then open a terminal in the proj
 
 ---
 
-## Step 5 — Install Project Dependencies
+## Step 4 — Install Project Dependencies
 
 In the project folder, run:
 
@@ -163,13 +100,9 @@ This reads `package.json` and downloads everything the app needs into a `node_mo
 | `@types/react` | 19 | TypeScript types for React (dev only) |
 | `@types/react-dom` | 19 | TypeScript types for React DOM (dev only) |
 
-No other external services, databases, or API keys are required. Everything runs locally.
-
 ---
 
-## Step 6 — Start the App
-
-Make sure Ollama is running first, then:
+## Step 5 — Start the App
 
 ```bash
 npm run dev
@@ -187,32 +120,26 @@ The app will be live. The first load may take a few seconds while Next.js compil
 
 ## Using the App
 
-**Arena tab** — Set up two characters with names, system prompts, and a shared situation. Pick a model for each agent (must be a model you've already pulled in Ollama). Hit Run and watch them talk.
+**Arena tab** — Set up two characters with names, system prompts, and a shared situation. Pick a model for each agent from the Groq model list. Hit Run and watch them talk.
 
 **Model tab** — Set the model for both agents at once.
 
 **Prompts tab** — Save and load prompt configurations as JSON files (stored in the `prompts/` folder).
 
-**Optimize tab (Evolution Circuit)** — Select a saved prompt config as a seed. The optimizer runs headless simulations automatically, rates each transcript on dramatic quality, mutates the weakest prompts, and evolves toward better configurations over multiple generations. Requires Ollama to be running with enough resources to handle back-to-back calls.
+**Optimize tab (Evolution Circuit)** — Select a saved prompt config as a seed. The optimizer runs headless simulations automatically, rates each transcript on dramatic quality, mutates the weakest prompts, and evolves toward better configurations over multiple generations.
 
 ---
 
 ## Troubleshooting
 
-**"connection refused" or model never loads:**
-Ollama isn't running. On Mac, check your menu bar for the Ollama icon. On Windows, check the system tray. Start it manually if needed:
-```bash
-ollama serve
-```
+**"Chat API error" or 401 errors:**
+Your `GROQ_API_KEY` is missing or invalid. Check `.env.local` in the project root.
 
-**Model not found error:**
-You haven't pulled the model yet. Run `ollama pull <model-name>` in a terminal.
+**Rate limit errors (429):**
+The app retries automatically on 429s (up to 5 times with backoff). If you're still hitting limits, reduce the number of concurrent runs or upgrade your Groq plan.
 
 **App won't start / npm errors:**
 Make sure you ran `npm install` in the project folder and that Node.js is version 18.17 or higher (`node --version`).
-
-**Slow or empty output after several turns:**
-Normal for large models on slower hardware. The app has a repeat penalty setting — if output is completely empty, the model may be running out of context. Try reducing the number of turns or using a smaller model.
 
 **Port 3000 already in use:**
 Another process is using that port. Either stop it, or run the app on a different port:

@@ -8,6 +8,7 @@ const TABS = [
   { href: "/optimize", label: "Evolve" },
   { href: "/colony", label: "Colony" },
   { href: "/mafia", label: "Mafia" },
+  { href: "/lifesim", label: "Life Sim" },
 ];
 
 export default function NavBar({ children }: { children: React.ReactNode }) {

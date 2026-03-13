@@ -8,955 +8,21 @@ import { cleanOutput } from "@/lib/cleanOutput";
 import type { ChatRequest } from "@/lib/types";
 import { W95Slider } from "@/components/W95Slider";
 import { fmtDate } from "@/lib/formatDate";
-
-const MESSAGE_WINDOW = 40;
-const VOTE_CONTEXT_WINDOW = 20;
-
-// Banned phrases that LLMs overuse — appended to speech prompts
-const BANNED_PHRASES = [
-  "classic wolf tactic",
-  "classic wolf move",
-  "classic wolf behavior",
-  "classic wolf cover-up",
-  "classic wolf lure",
-  "concrete evidence",
-  "concrete observation",
-  "sow division",
-  "sowing discord",
-  "conveniently",
-  "throwing shade",
-  "awfully quiet",
-  "deflecting suspicion",
-  "playing it safe",
-  "piggyback",
-  "bandwagon",
-  "under the bus",
-  "speaks volumes",
-  "food for thought",
-  "interesting that",
-  "just saying",
-];
-const BANNED_PHRASES_LINE = `
-SPEAKING RULES:
-- Do NOT accuse anyone of "being vague," "lacking concrete evidence," or "not providing observations." Instead, point to a SPECIFIC thing they said and explain why it's suspicious.
-- Do NOT use canned phrases like "classic wolf move," "sowing discord," "throwing shade," "speaks volumes," or any similar stock expressions.
-- Every accusation must reference something specific someone actually said — quote or paraphrase their words.
-- If you can't think of something specific, share your gut feeling about someone rather than criticizing how others argue.`;
-const DEFAULT_TEMPERATURE = 0.9;
-const MODEL_KEY = "mafia-model";
-const TEMP_KEY = "mafia-temperature";
-
-// ── helpers ────────────────────────────────────────────────────────────────────
-
-let msgId = 0;
-function nextMsgId() {
-  return `mm-${++msgId}`;
-}
-
-function shuffle<T>(arr: T[]): T[] {
-  const out = [...arr];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
-
-// ── prompt construction ────────────────────────────────────────────────────────
-
-function buildDayPrompt(
-  player: MafiaPlayer,
-  allPlayers: MafiaPlayer[],
-  round: number,
-  detectiveResults?: Array<{ round: number; target: string; isWolf: boolean }>,
-  roundHistory?: Array<{
-    round: number;
-    hangedName: string | null;
-    hangedRole: MafiaRole | null;
-    nightKillName: string | null;
-    nightKillSaved: boolean;
-    votes: Array<{ voter: string; target: string }>;
-  }>,
-  previousSaid?: string[],
-  wolfStrategyContent?: string[],
-): string {
-  const alive = allPlayers.filter((p) => p.alive);
-  const dead = allPlayers.filter((p) => !p.alive);
-  const aliveNames = alive.map((p) => p.name).join(", ");
-  const deadInfo = dead.length > 0
-    ? `\nEliminated (DEAD — do NOT accuse, discuss, or vote for them): ${dead.map((p) => p.name).join(", ")}`
-    : "";
-
-  let roleInfo: string;
-  if (player.role === "wolf") {
-    const partner = allPlayers.find((p) => p.role === "wolf" && p.id !== player.id && p.alive);
-    const partnerInfo = partner ? ` Your fellow wolf is ${partner.name} — protect them without being obvious.` : " You are the last wolf. Be careful.";
-    roleInfo = `Your SECRET role: WOLF. You must blend in with the villagers and avoid suspicion. Manipulate, deflect, and cast doubt on others.${partnerInfo} Never reveal you are a wolf.`;
-  } else if (player.role === "doctor") {
-    roleInfo = "Your SECRET role: DOCTOR. You are a villager with the power to protect one player each night. You must figure out who the wolves are while keeping your role hidden — if wolves learn you're the Doctor, they'll target you.";
-  } else if (player.role === "detective") {
-    roleInfo = "Your SECRET role: DETECTIVE. You are a villager who can investigate one player each night to learn if they are a wolf. Share your findings carefully — revealing your role makes you a target.";
-    if (detectiveResults && detectiveResults.length > 0) {
-      const resultLines = detectiveResults.map((r) =>
-        `  Night ${r.round}: You investigated ${r.target} — ${r.isWolf ? "WOLF" : "NOT a wolf"}.`
-      ).join("\n");
-
-      const foundWolf = detectiveResults.find((r) => r.isWolf);
-      const cleared = detectiveResults.filter((r) => !r.isWolf).map((r) => r.target);
-
-      roleInfo += `\n\nYour investigation results:\n${resultLines}`;
-      if (foundWolf) {
-        roleInfo += `\nYou KNOW ${foundWolf.target} is a wolf. Build a case against them — accuse them with conviction. You can hint at special knowledge without revealing your role, or reveal yourself if the stakes are high enough.`;
-      } else if (cleared.length >= 2) {
-        roleInfo += `\nYou've cleared ${cleared.join(" and ")}. Steer the group toward untested players. Consider vouching for cleared players if they're under suspicion.`;
-      } else {
-        roleInfo += `\nUse this information strategically without revealing how you know.`;
-      }
-    }
-  } else {
-    roleInfo = "Your SECRET role: VILLAGER. You must figure out who the wolves are and convince others to vote them out. Watch for suspicious behavior — deflection, vagueness, convenient accusations.";
-  }
-
-  const recap = roundHistory ? buildRoundRecap(roundHistory) : "";
-  const escalation = buildEscalationNote(alive.length, round);
-  const noRepeat = previousSaid && previousSaid.length > 0
-    ? ` You have already said things like: "${previousSaid.slice(-3).join('"; "')}". Say something NEW — a different observation, a new suspicion, a fresh angle. Do not repeat yourself.`
-    : "";
-
-  const textOnly = " This is a text-only discussion — you CANNOT see body language, facial expressions, physical reactions, or locations. Do not reference any physical observations.";
-  const knowledgeAnchor = round === 1
-    ? `\nThis is the FIRST round. You have never spoken to these people before. You have NO prior observations, no night chat history, no timestamps, no private messages — nothing has happened yet. You can only react to what people say RIGHT NOW in this discussion. Do not reference or invent events from before this moment.${textOnly}`
-    : `\nEVERYTHING you know comes from the discussion transcript and round recap above. If it's not there, it didn't happen. No locations, no physical clues, no private conversations exist.${textOnly}`;
-
-  return [
-    `You are ${player.name}. You MUST speak in a voice matching this personality — your word choices, sentence structure, emotional tone, and approach should reflect who you are. Do not sound like a generic analyst.`,
-    `${player.personality} (Channel this in HOW you speak, not just what you say.)`,
-    BANNED_PHRASES_LINE,
-    "",
-    `You're playing Mafia — a social deduction game. ${alive.length} players remain. Each night, the wolves drag one villager to their death.`,
-    `Each round, everyone discusses, then votes to hang one player. If all wolves are hanged, villagers win. If wolves equal villagers, wolves win.`,
-    "",
-    roleInfo,
-    ...(player.role === "wolf" && wolfStrategyContent && wolfStrategyContent.length > 0
-      ? ["", `YOUR STRATEGY (from your private wolf discussion this morning):\n${wolfStrategyContent.join("\n")}\nRemember this plan but act natural — don't make it obvious.`]
-      : []),
-    "",
-    `Alive: ${aliveNames}${deadInfo}`,
-    ...(recap ? ["", recap] : []),
-    "",
-    `It is Day ${round}.${knowledgeAnchor} Speak to the group — focus ONLY on living players. Dead players are gone and irrelevant. Stay in character. Be strategic but natural — 2-4 sentences. Don't narrate actions or use asterisks. Respond with dialogue only — no internal reasoning, no thinking tags.${escalation}${noRepeat}`,
-  ].join("\n");
-}
-
-function buildRebuttalPrompt(
-  player: MafiaPlayer,
-  allPlayers: MafiaPlayer[],
-  round: number,
-  accuserNames: string[],
-): string {
-  const alive = allPlayers.filter((p) => p.alive);
-  const aliveNames = alive.map((p) => p.name).join(", ");
-
-  const roleInfo = player.role === "wolf"
-    ? "Your SECRET role: WOLF. Defend yourself without revealing your true nature. Deflect and cast doubt elsewhere."
-    : "Your SECRET role: VILLAGER. Defend yourself honestly and redirect suspicion to whoever seems most suspicious to you.";
-
-  const accuserList = accuserNames.length === 1
-    ? accuserNames[0]
-    : accuserNames.slice(0, -1).join(", ") + " and " + accuserNames[accuserNames.length - 1];
-
-  return [
-    `You are ${player.name}. You MUST speak in a voice matching this personality — your word choices, sentence structure, emotional tone, and approach should reflect who you are.`,
-    `${player.personality} (Channel this in HOW you speak, not just what you say.)`,
-    BANNED_PHRASES_LINE,
-    "",
-    `You're playing Mafia. ${alive.length} players remain. Alive: ${aliveNames}`,
-    "",
-    roleInfo,
-    "",
-    `Your name has come up multiple times in today's discussion. ${accuserList} seem${accuserNames.length === 1 ? 's' : ''} suspicious of you.`,
-    `Address their concerns directly. Defend yourself, challenge your accusers, or redirect suspicion. Be passionate and specific — 2-3 sentences. Don't narrate actions or use asterisks. Respond with dialogue only — no internal reasoning, no thinking tags. Only reference events from the transcript. If you didn't read it above, it didn't happen. This is text-only — no body language, facial expressions, or physical observations.${buildEscalationNote(alive.length, round)}`,
-  ].join("\n");
-}
-
-function buildFollowUpPrompt(
-  player: MafiaPlayer,
-  allPlayers: MafiaPlayer[],
-  round: number,
-  defendingPlayerName: string,
-): string {
-  const alive = allPlayers.filter((p) => p.alive);
-  const aliveNames = alive.map((p) => p.name).join(", ");
-
-  const roleInfo = player.role === "wolf"
-    ? "Your SECRET role: WOLF. Press your case strategically or back off if pressing draws too much attention to you."
-    : "Your SECRET role: VILLAGER. If you still suspect them, press harder. If their defense was convincing, acknowledge it.";
-
-  return [
-    `You are ${player.name}. You MUST speak in a voice matching this personality — your word choices, sentence structure, emotional tone, and approach should reflect who you are.`,
-    `${player.personality} (Channel this in HOW you speak, not just what you say.)`,
-    BANNED_PHRASES_LINE,
-    "",
-    `You're playing Mafia. ${alive.length} players remain. Alive: ${aliveNames}`,
-    "",
-    roleInfo,
-    "",
-    `${defendingPlayerName} just spoke. Respond directly to what they said — challenge their points, defend your position, press harder, or shift focus. Be specific and natural. 2-3 sentences. Don't narrate actions or use asterisks. Respond with dialogue only — no internal reasoning, no thinking tags. This is text-only — no body language, facial expressions, or physical observations.${buildEscalationNote(alive.length, round)}`,
-  ].join("\n");
-}
-
-function buildVotePrompt(
-  player: MafiaPlayer,
-  allPlayers: MafiaPlayer[],
-  roundHistory?: Array<{
-    round: number;
-    hangedName: string | null;
-    hangedRole: MafiaRole | null;
-    nightKillName: string | null;
-    nightKillSaved: boolean;
-    votes: Array<{ voter: string; target: string }>;
-  }>,
-  round?: number,
-): string {
-  const alive = allPlayers.filter((p) => p.alive && p.id !== player.id);
-  const dead = allPlayers.filter((p) => !p.alive);
-  const aliveNames = alive.map((p) => p.name).join(", ");
-
-  const roleHint = player.role === "wolf"
-    ? "As a wolf, vote strategically — condemn a villager or sacrifice a weak wolf to maintain cover."
-    : "As a villager, vote for whoever you believe is a wolf.";
-
-  const deadWarning = dead.length > 0
-    ? `\nDead players (DO NOT vote for any of these — they are already eliminated): ${dead.map((p) => p.name).join(", ")}`
-    : "";
-
-  const recap = roundHistory ? buildRoundRecap(roundHistory) : "";
-  const escalation = buildEscalationNote(alive.length + 1, round ?? 1);
-
-  return [
-    `You are ${player.name}. You MUST speak in a voice matching this personality — your word choices, sentence structure, emotional tone, and approach should reflect who you are.`,
-    `${player.personality} (Channel this in HOW you speak, not just what you say.)`,
-    BANNED_PHRASES_LINE,
-    "",
-    `You can ONLY vote for one of these living players: ${aliveNames}.${deadWarning}`,
-    roleHint,
-    ...(recap ? ["", recap] : []),
-    "",
-    `The town is voting to put someone on trial. Base your vote on YOUR OWN reading of the discussion — who struck you as evasive, inconsistent, or suspicious? Name the person YOU find most suspicious and say why, referencing specific things they said or did. 1-2 sentences. No hedging — name one living person clearly. No actions, no asterisks. Respond with dialogue only — no internal reasoning, no thinking tags. Only reference events from the transcript. If you didn't read it above, it didn't happen.${escalation}`,
-  ].join("\n");
-}
-
-function buildTrialDefensePrompt(
-  accused: MafiaPlayer,
-  allPlayers: MafiaPlayer[],
-): string {
-  const alive = allPlayers.filter((p) => p.alive && p.id !== accused.id);
-  const aliveNames = alive.map((p) => p.name).join(", ");
-
-  return [
-    `You are ${accused.name}. Your personality influences your style, not your competence.`,
-    `${accused.personality}`,
-    "",
-    `The village has accused you. You are on trial for your life. The remaining players (${aliveNames}) will vote to hang or spare you after you speak.`,
-    "",
-    `Make your case — defend yourself, deflect suspicion, accuse someone else, plead for mercy. This is your one chance to convince them. 2-3 sentences. No actions, no asterisks. Respond with dialogue only — no internal reasoning, no thinking tags.`,
-  ].join("\n");
-}
-
-function buildJudgmentVotePrompt(
-  voter: MafiaPlayer,
-  accused: MafiaPlayer,
-  allPlayers: MafiaPlayer[],
-): string {
-  const roleHint = voter.role === "wolf"
-    ? accused.role === "wolf"
-      ? "As a fellow wolf, you probably want to spare them — but voting to spare too eagerly may reveal you."
-      : "As a wolf, hanging a villager benefits you."
-    : "As a villager, hang them if you think they're a wolf. Spare them if you're not convinced.";
-
-  return [
-    `You are ${voter.name}. ${voter.personality}`,
-    "",
-    `${accused.name} is on trial. You've heard their defense. Now you must vote: HANG or SPARE.`,
-    `Judge for yourself based on what you've actually observed — don't just follow the crowd. A wrong hang kills a villager and helps the wolves.`,
-    roleHint,
-    "",
-    `Say your vote clearly — "hang" or "spare" — and briefly explain why, referencing something specific. 1 sentence. No actions, no asterisks. Respond with dialogue only — no internal reasoning, no thinking tags.`,
-  ].join("\n");
-}
-
-function buildWolfDiscussionPrompt(
-  wolf: MafiaPlayer,
-  allPlayers: MafiaPlayer[],
-  round: number,
-): string {
-  const wolves = allPlayers.filter((p) => p.alive && p.role === "wolf");
-  const targets = allPlayers.filter((p) => p.alive && p.role !== "wolf");
-  const dead = allPlayers.filter((p) => !p.alive);
-  const partnerNames = wolves.filter((w) => w.id !== wolf.id).map((w) => w.name);
-  const targetNames = targets.map((p) => p.name).join(", ");
-
-  const partnerLine = partnerNames.length > 0
-    ? `You are whispering with your fellow wolf${partnerNames.length > 1 ? 's' : ''}: ${partnerNames.join(" and ")}.`
-    : "You are the last wolf. Think through your options.";
-
-  const deadWarning = dead.length > 0
-    ? `\nDead players (cannot be targeted): ${dead.map((p) => p.name).join(", ")}`
-    : "";
-
-  return [
-    `You are ${wolf.name}, a wolf. It is night — the village sleeps.`,
-    partnerLine,
-    "",
-    `Your ONLY valid targets (living villagers): ${targetNames}`,
-    `You CANNOT kill fellow wolves or dead players.${deadWarning}`,
-    "",
-    `Discuss who to kill tonight. Consider who is most dangerous — strong investigators, influential voices, or anyone who suspects you. Name one of the valid targets above. Be strategic and conversational. 1-2 sentences. No actions, no asterisks. Respond with dialogue only — no internal reasoning, no thinking tags.`,
-  ].join("\n");
-}
-
-function buildDoctorPrompt(
-  doctor: MafiaPlayer,
-  allPlayers: MafiaPlayer[],
-  lastProtected: string | null,
-  roundHistory?: Array<{
-    round: number;
-    hangedName: string | null;
-    hangedRole: MafiaRole | null;
-    nightKillName: string | null;
-    nightKillSaved: boolean;
-    votes: Array<{ voter: string; target: string }>;
-  }>,
-): string {
-  const alive = allPlayers.filter((p) => p.alive);
-  const candidates = alive.filter((p) => p.name !== lastProtected);
-  const candidateNames = candidates.map((p) => p.name).join(", ");
-
-  const restriction = lastProtected
-    ? `\nYou CANNOT protect ${lastProtected} — you protected them last night.`
-    : "";
-
-  // Hint about who wolves might target
-  const strategyHint = "Wolves tend to kill players who are investigating well, who accused them during the day, or who are leading the village. Think about who stood out today and who the wolves would want silenced.";
-
-  const recap = roundHistory ? buildRoundRecap(roundHistory) : "";
-
-  return [
-    `You are ${doctor.name}, the Doctor. It is night. You can protect one player from being killed tonight.`,
-    `Players you can protect: ${candidateNames}${restriction}`,
-    ...(recap ? ["", recap] : []),
-    "",
-    strategyHint,
-    `Choose wisely — if you protect the wolf's target, they survive. Name exactly one player and say why. 1 sentence. Respond with dialogue only — no internal reasoning, no thinking tags.`,
-  ].join("\n");
-}
-
-function buildDetectivePrompt(
-  detective: MafiaPlayer,
-  allPlayers: MafiaPlayer[],
-  pastResults: Array<{ round: number; target: string; isWolf: boolean }>,
-): string {
-  const alive = allPlayers.filter((p) => p.alive && p.id !== detective.id);
-  const alreadyInvestigated = new Set(pastResults.map((r) => r.target));
-  const candidates = alive.filter((p) => !alreadyInvestigated.has(p.name));
-  const candidateNames = candidates.length > 0
-    ? candidates.map((p) => p.name).join(", ")
-    : alive.map((p) => p.name).join(", ");
-
-  let pastInfo = "";
-  if (pastResults.length > 0) {
-    pastInfo = "\nYour past investigations:\n" + pastResults.map((r) =>
-      `  Night ${r.round}: ${r.target} — ${r.isWolf ? "WOLF" : "NOT a wolf"}`
-    ).join("\n") + "\n";
-  }
-
-  return [
-    `You are ${detective.name}, the Detective. It is night. You MUST investigate one player to learn if they are a wolf.`,
-    `Players you can investigate: ${candidateNames}${pastInfo}`,
-    `You MUST choose someone — skipping your investigation wastes your most powerful ability. Name exactly one player from the list above and say why you're investigating them. 1 sentence. Respond with dialogue only — no internal reasoning, no thinking tags.`,
-  ].join("\n");
-}
-
-function buildLastWordsPrompt(
-  player: MafiaPlayer,
-  allPlayers: MafiaPlayer[],
-): string {
-  const alive = allPlayers.filter((p) => p.alive && p.id !== player.id);
-  const aliveNames = alive.map((p) => p.name).join(", ");
-
-  return [
-    `You are ${player.name}. ${player.personality}`,
-    "",
-    `The village has condemned you. Speak from the heart — not from your archetype. The noose is around your neck — these are your final moments.`,
-    `Remaining players: ${aliveNames}`,
-    "",
-    `Say your last words — share your suspicions, make a final accusation, plead your case, or leave a parting message. 1-2 sentences. No actions, no asterisks. Respond with dialogue only — no internal reasoning, no thinking tags.`,
-  ].join("\n");
-}
-
-function buildDeathReactionPrompt(
-  reactor: MafiaPlayer,
-  deadName: string,
-  deadRole: string,
-  allPlayers: MafiaPlayer[],
-  wasHanging: boolean,
-): string {
-  const action = wasHanging
-    ? `${deadName} was hanged yesterday. They turned out to be a ${deadRole}.`
-    : `${deadName} was found dead this morning — killed by wolves in the night. They were a ${deadRole}.`;
-
-  const alive = allPlayers.filter((p) => p.alive);
-  const aliveNames = alive.map((p) => p.name).join(", ");
-
-  const roleHint = reactor.role === "wolf"
-    ? "As a wolf, react naturally — show fake concern or use this death to cast suspicion elsewhere."
-    : "";
-
-  return [
-    `You are ${reactor.name}. ${reactor.personality}`,
-    BANNED_PHRASES_LINE,
-    "",
-    action,
-    `Remaining players: ${aliveNames}`,
-    roleHint,
-    "",
-    `React to this death — are you shocked, relieved, suspicious, guilty? What does this mean for who the wolves might be? Reference something specific from the game. 1-2 sentences. Be emotional and specific. No actions, no asterisks. Respond with dialogue only — no internal reasoning, no thinking tags. Only reference events from the transcript. If you didn't read it above, it didn't happen. This is text-only — no body language, facial expressions, or physical observations.`,
-  ].join("\n");
-}
-
-function buildWolfStrategyPrompt(
-  wolf: MafiaPlayer,
-  allPlayers: MafiaPlayer[],
-  round: number,
-  roundHistory: Array<{
-    round: number;
-    hangedName: string | null;
-    hangedRole: MafiaRole | null;
-    nightKillName: string | null;
-    nightKillSaved: boolean;
-    votes: Array<{ voter: string; target: string }>;
-  }>,
-): string {
-  const wolves = allPlayers.filter((p) => p.alive && p.role === "wolf");
-  const villagers = allPlayers.filter((p) => p.alive && p.role !== "wolf");
-  const partnerNames = wolves.filter((w) => w.id !== wolf.id).map((w) => w.name);
-
-  const partnerLine = partnerNames.length > 0
-    ? `Whispering with your fellow wolf: ${partnerNames.join(" and ")}.`
-    : "You are the last wolf. Plan carefully.";
-
-  const historyNote = roundHistory.length > 0
-    ? `\nPast rounds: ${roundHistory.map((h) => {
-        const parts: string[] = [];
-        if (h.hangedName) parts.push(`D${h.round}: ${h.hangedName} hanged (${h.hangedRole})`);
-        if (h.nightKillName) parts.push(`N${h.round}: killed ${h.nightKillName}`);
-        return parts.join(", ");
-      }).join(" | ")}`
-    : "";
-
-  return [
-    `You are ${wolf.name}, a wolf. It is dawn — the village is waking up. Quick whisper before day begins.`,
-    partnerLine,
-    "",
-    `Living villagers: ${villagers.map((p) => p.name).join(", ")}${historyNote}`,
-    "",
-    `Coordinate your daytime strategy: Who should you frame or cast suspicion on today? Who should you defend to look innocent? Should you lay low or be aggressive? Be specific about names. 1-2 sentences. No actions, no asterisks. Respond with dialogue only — no internal reasoning, no thinking tags.`,
-  ].join("\n");
-}
-
-function buildInterjectionPrompt(
-  player: MafiaPlayer,
-  allPlayers: MafiaPlayer[],
-  round: number,
-  accusedName: string,
-): string {
-  const alive = allPlayers.filter((p) => p.alive);
-  const aliveNames = alive.map((p) => p.name).join(", ");
-
-  const roleInfo = player.role === "wolf"
-    ? "Your SECRET role: WOLF. Use this moment to steer suspicion away from yourself or your partner."
-    : player.role === "detective"
-      ? "Your SECRET role: DETECTIVE. Weigh in based on what you know."
-      : player.role === "doctor"
-        ? "Your SECRET role: DOCTOR. Weigh in honestly."
-        : "Your SECRET role: VILLAGER. Weigh in honestly — support the accusation or defend the accused.";
-
-  const urgency = buildEscalationNote(alive.length, round);
-
-  return [
-    `You are ${player.name}. Your personality influences your style, not your competence.`,
-    `${player.personality}`,
-    BANNED_PHRASES_LINE,
-    "",
-    `You're playing Mafia. ${alive.length} players remain. Alive: ${aliveNames}`,
-    "",
-    roleInfo,
-    "",
-    `A heated debate about ${accusedName} is happening. Jump in — do you agree with the accusations? See something others are missing? Have your own suspect?${urgency} 1-2 sentences. Don't narrate actions or use asterisks. Respond with dialogue only — no internal reasoning, no thinking tags. This is text-only — no body language, facial expressions, or physical observations.`,
-  ].join("\n");
-}
-
-function buildGeneratorPrompt(count: number, existing: string[]): string {
-  const existingList = existing.length > 0
-    ? `\nDo NOT duplicate these existing personalities:\n${existing.map((p) => `- ${p}`).join("\n")}\n`
-    : "";
-
-  return [
-    `Generate ${count} unique character personalities for a Mafia/Werewolf social deduction game.`,
-    `Each personality should be 1-2 sentences describing HOW this person behaves in group discussions — their social strategy, emotional tendencies, and interpersonal style.`,
-    `Make them diverse: include manipulators, truth-seekers, emotional players, analytical minds, wildcards, quiet observers, and loud personalities.`,
-    existingList,
-    `Reply with ONLY a JSON array of objects: [{"name": "The Archetype", "personality": "description"}, ...]`,
-  ].join("\n");
-}
-
-// ── round history & escalation helpers ────────────────────────────────────────
-
-function buildRoundRecap(
-  history: Array<{
-    round: number;
-    hangedName: string | null;
-    hangedRole: MafiaRole | null;
-    nightKillName: string | null;
-    nightKillSaved: boolean;
-    votes: Array<{ voter: string; target: string }>;
-  }>,
-): string {
-  if (history.length === 0) return "";
-
-  const lines: string[] = ["WHAT HAS HAPPENED:"];
-  for (const h of history) {
-    if (h.hangedName) {
-      const roleLabel = h.hangedRole === "wolf" ? "WOLF!" : h.hangedRole?.toUpperCase() ?? "VILLAGER";
-      const wrongNote = h.hangedRole !== "wolf" ? " (wrong call)" : "";
-      lines.push(`  Day ${h.round}: ${h.hangedName} was hanged — revealed as ${roleLabel}${wrongNote}`);
-    } else {
-      lines.push(`  Day ${h.round}: No one was hanged`);
-    }
-    if (h.votes.length > 0) {
-      const voteMap = new Map<string, string[]>();
-      for (const v of h.votes) {
-        const arr = voteMap.get(v.target) || [];
-        arr.push(v.voter);
-        voteMap.set(v.target, arr);
-      }
-      const voteSummary = [...voteMap.entries()]
-        .sort((a, b) => b[1].length - a[1].length)
-        .map(([target, voters]) => `${target}(${voters.length}: ${voters.join(", ")})`)
-        .join(", ");
-      lines.push(`    Accusation votes: ${voteSummary}`);
-    }
-    if (h.nightKillSaved) {
-      lines.push(`  Night ${h.round}: Wolves attacked but the Doctor saved their target`);
-    } else if (h.nightKillName) {
-      lines.push(`  Night ${h.round}: ${h.nightKillName} was killed by wolves`);
-    }
-  }
-  return lines.join("\n");
-}
-
-function buildEscalationNote(aliveCount: number, round: number): string {
-  if (aliveCount <= 4) {
-    return `\nURGENT: Only ${aliveCount} players remain. Every vote could end the game. If you suspect someone, this may be your last chance to act.`;
-  }
-  if (aliveCount <= 6) {
-    return `\nThe village is shrinking. ${aliveCount} remain. Wrong votes are increasingly costly.`;
-  }
-  if (round >= 3) {
-    return `\nThis is Day ${round}. The wolves are still out there. Time is not on the village's side.`;
-  }
-  return "";
-}
-
-function formatTrialContext(
-  messages: MafiaMessage[],
-  round: number,
-  accusedName: string,
-): string {
-  const trialMsgs = messages.filter((m) =>
-    m.round === round && m.phase === "vote" && m.playerId
-  );
-  const lastFew = trialMsgs.slice(-6);
-  if (lastFew.length === 0) return `${accusedName} is on trial.`;
-  return lastFew.map((m) => `${m.playerName}: ${m.content}`).join("\n");
-}
-
-function formatRecentChat(
-  messages: MafiaMessage[],
-  window: number,
-  includeWolfChat = false,
-  alivePlayers?: MafiaPlayer[],
-): string {
-  const aliveSet = alivePlayers
-    ? new Set(alivePlayers.filter((p) => p.alive).map((p) => p.name))
-    : null;
-
-  const recent = messages
-    .filter((m) => {
-      if (m.phase === "system" || m.phase === "doctor" || m.phase === "detective") return false;
-      if (m.phase === "wolf-chat" && !includeWolfChat) return false;
-      if (m.phase === "wolf-strategy" && !includeWolfChat) return false;
-      if (m.phase === "night" || m.phase === "reaction") return false;
-      return true;
-    })
-    .slice(-window);
-  if (recent.length === 0) return "(The game just started. No one has spoken yet. You have no prior observations.)";
-
-  // Group messages by phase for structured context
-  const lines: string[] = [];
-  let lastPhase: string | null = null;
-  const phaseLabels: Record<string, string> = {
-    day: "[Discussion]",
-    vote: "[Voting]",
-    "wolf-chat": "[Wolf whisper]",
-    "wolf-strategy": "[Wolf strategy]",
-  };
-
-  for (const m of recent) {
-    if (m.phase !== lastPhase && phaseLabels[m.phase]) {
-      lines.push("");
-      lines.push(phaseLabels[m.phase]);
-      lastPhase = m.phase;
-    }
-    if (aliveSet && m.playerName && !aliveSet.has(m.playerName)) {
-      lines.push(`${m.playerName} (DEAD — ignore): ${m.content}`);
-    } else {
-      lines.push(`${m.playerName}: ${m.content}`);
-    }
-  }
-  return lines.join("\n").trim();
-}
-
-function formatWolfContext(messages: MafiaMessage[], round: number): string {
-  const dayMsgs = messages.filter((m) => m.round === round && m.phase === "day")
-    .slice(-20)
-    .map((m) => `${m.playerName}: ${m.content}`).join("\n");
-
-  const wolfMsgs = messages.filter((m) => m.round === round && m.phase === "wolf-chat")
-    .map((m) => `${m.playerName}: ${m.content}`).join("\n");
-
-  let context = "";
-  if (dayMsgs) context += `[Today's discussion]\n${dayMsgs}\n\n`;
-  if (wolfMsgs) context += `[Wolf discussion]\n${wolfMsgs}`;
-  return context || "(No discussion yet.)";
-}
-
-// ── LLM orchestrator functions ───────────────────────────────────────────────
-
-async function parseVotesFromSpeech(
-  voteSpeechTexts: Array<{ voterName: string; speech: string }>,
-  candidates: string[],
-  model: string,
-  signal?: AbortSignal,
-): Promise<MafiaVote[]> {
-  if (voteSpeechTexts.length === 0) return [];
-
-  const speechBlock = voteSpeechTexts
-    .map((v) => `${v.voterName}: "${v.speech}"`)
-    .join("\n");
-
-  try {
-    const request: ChatRequest = {
-      model,
-      system: [
-        "You extract votes from a Mafia game. Players just gave speeches about who they want to hang.",
-        "Read each speech and determine who each player is voting to execute.",
-        "Reply with ONLY a JSON array: [{\"voter\":\"Name\",\"target\":\"Name\"}, ...]",
-        "Omit any voter whose intent is genuinely unclear. Only use names from the candidate list.",
-      ].join(" "),
-      messages: [{
-        role: "user",
-        content: `Candidates: ${candidates.join(", ")}\n\nVote speeches:\n${speechBlock}\n\nExtract each voter's target. Reply with ONLY valid JSON.`,
-      }],
-      temperature: 0,
-    };
-
-    let result = "";
-    await streamChatResponse(request, (token) => { result += token; }, signal);
-    const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
-
-    if (!Array.isArray(parsed)) return [];
-
-    const votes: MafiaVote[] = [];
-    for (const entry of parsed) {
-      const voter = voteSpeechTexts.find(
-        (v) => v.voterName.toLowerCase() === entry.voter?.toLowerCase()
-      );
-      const target = candidates.find(
-        (c) => c.toLowerCase() === entry.target?.toLowerCase()
-      );
-      if (voter && target) {
-        votes.push({ voterId: "", voterName: voter.voterName, targetName: target });
-      }
-    }
-    return votes;
-  } catch { /* parse failed or aborted */ }
-
-  return [];
-}
-
-async function parseWolfKillFromDiscussion(
-  wolfMessages: Array<{ wolfName: string; speech: string }>,
-  targetNames: string[],
-  model: string,
-  signal?: AbortSignal,
-): Promise<string | null> {
-  if (wolfMessages.length === 0) return null;
-
-  const discussion = wolfMessages
-    .map((m) => `${m.wolfName}: "${m.speech}"`)
-    .join("\n");
-
-  try {
-    const request: ChatRequest = {
-      model,
-      system: [
-        "You analyze a private wolf discussion in a Mafia game.",
-        "Determine their consensus kill target — the player they agreed on, or the one mentioned most favorably as a target.",
-        "Reply with ONLY a JSON object: {\"target\":\"Name\"}",
-        "Only use names from the target list. If truly unclear: {\"target\":null}",
-      ].join(" "),
-      messages: [{
-        role: "user",
-        content: `Targets: ${targetNames.join(", ")}\n\nWolf discussion:\n${discussion}\n\nWho did they decide to kill? Reply with ONLY valid JSON.`,
-      }],
-      temperature: 0,
-    };
-
-    let result = "";
-    await streamChatResponse(request, (token) => { result += token; }, signal);
-    const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
-    if (parsed.target) {
-      const match = targetNames.find((n) => n.toLowerCase() === parsed.target.toLowerCase());
-      if (match) return match;
-    }
-  } catch { /* parse failed or aborted */ }
-
-  return null;
-}
-
-async function parseNightChoice(
-  speech: string,
-  candidates: string[],
-  action: "protect" | "investigate",
-  model: string,
-  signal?: AbortSignal,
-): Promise<string | null> {
-  if (!speech.trim()) return null;
-
-  try {
-    const request: ChatRequest = {
-      model,
-      system: [
-        `You extract a player's night action choice in a Mafia game.`,
-        `Determine which player they chose to ${action}.`,
-        `Reply with ONLY a JSON object: {"${action}":"Name"}`,
-        `Only use names from the candidate list. If unclear: {"${action}":null}`,
-      ].join(" "),
-      messages: [{
-        role: "user",
-        content: `Player's response: "${speech}"\nValid candidates: ${candidates.join(", ")}\n\nReply with ONLY valid JSON.`,
-      }],
-      temperature: 0,
-    };
-
-    let result = "";
-    await streamChatResponse(request, (token) => { result += token; }, signal);
-    const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
-    const value = parsed[action];
-    if (value) {
-      const match = candidates.find((n) => n.toLowerCase() === value.toLowerCase());
-      if (match) return match;
-    }
-  } catch { /* parse failed or aborted */ }
-
-  return null;
-}
-
-async function parseNightChoiceWithRetry(
-  speech: string,
-  candidates: string[],
-  action: "protect" | "investigate",
-  model: string,
-  signal?: AbortSignal,
-): Promise<{ name: string; method: "parsed" | "retry" | "random" }> {
-  // Try parsing the initial speech
-  const first = await parseNightChoice(speech, candidates, action, model, signal);
-  if (first) return { name: first, method: "parsed" };
-
-  // Retry up to 2x with ultra-constrained prompt
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const request: ChatRequest = {
-        model,
-        system: `You MUST respond with exactly one name from this list. Nothing else — just the name.`,
-        messages: [{ role: "user", content: `Choose one to ${action}: ${candidates.join(", ")}` }],
-        temperature: 0.3,
-      };
-
-      let result = "";
-      await streamChatResponse(request, (token) => { result += token; }, signal);
-      const trimmed = result.trim();
-
-      // Try parsing
-      const parsed = await parseNightChoice(trimmed, candidates, action, model, signal);
-      if (parsed) return { name: parsed, method: "retry" };
-
-      // Try direct string match
-      const directMatch = candidates.find((c) => trimmed.toLowerCase().includes(c.toLowerCase()));
-      if (directMatch) return { name: directMatch, method: "retry" };
-    } catch { /* retry failed */ }
-  }
-
-  // All retries failed — random selection
-  const random = candidates[Math.floor(Math.random() * candidates.length)];
-  return { name: random, method: "random" };
-}
-
-async function rewriteInVoice(
-  rawSpeech: string,
-  playerName: string,
-  personality: string,
-  model: string,
-  signal?: AbortSignal,
-): Promise<string> {
-  if (!rawSpeech.trim() || rawSpeech === "(stays silent)") return rawSpeech;
-
-  try {
-    const request: ChatRequest = {
-      model,
-      system: [
-        "You are a dialogue writer. Rewrite this Mafia game speech to match this character's distinctive voice.",
-        `Character: ${playerName}`,
-        `Personality: ${personality}`,
-        "Keep the same meaning, accusations, and strategic content. Change ONLY the voice: word choices, sentence rhythm, emotional tone, idioms, and mannerisms.",
-        "Return ONLY the rewritten speech — no quotes, no commentary, no explanation.",
-      ].join("\n"),
-      messages: [{ role: "user", content: rawSpeech }],
-      temperature: 0.9,
-    };
-
-    let result = "";
-    await streamChatResponse(request, (token) => { result += token; }, signal);
-    const trimmed = result.trim();
-    return trimmed || rawSpeech;
-  } catch {
-    return rawSpeech;
-  }
-}
-
-async function parseJudgmentVotes(
-  speeches: Array<{ voterName: string; speech: string }>,
-  accusedName: string,
-  model: string,
-  signal?: AbortSignal,
-): Promise<{ hang: string[]; spare: string[] }> {
-  const result = { hang: [] as string[], spare: [] as string[] };
-  if (speeches.length === 0) return result;
-
-  const speechBlock = speeches
-    .map((v) => `${v.voterName}: "${v.speech}"`)
-    .join("\n");
-
-  try {
-    const request: ChatRequest = {
-      model,
-      system: [
-        `You extract judgment votes from a Mafia trial. Players voted to HANG or SPARE ${accusedName}.`,
-        "Read each speech and determine if the voter wants to hang or spare the accused.",
-        'Reply with ONLY a JSON object: {"hang":["Name1","Name2"],"spare":["Name3"]}',
-        "Only use voter names from the speeches. If a voter's intent is unclear, put them in spare (benefit of the doubt).",
-      ].join(" "),
-      messages: [{
-        role: "user",
-        content: `Trial of ${accusedName}.\n\nVote speeches:\n${speechBlock}\n\nExtract each voter's judgment. Reply with ONLY valid JSON.`,
-      }],
-      temperature: 0,
-    };
-
-    let raw = "";
-    await streamChatResponse(request, (token) => { raw += token; }, signal);
-    const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
-    if (Array.isArray(parsed.hang)) result.hang = parsed.hang;
-    if (Array.isArray(parsed.spare)) result.spare = parsed.spare;
-  } catch { /* parse failed */ }
-
-  return result;
-}
-
-async function orchestrateAccusations(
-  messages: MafiaMessage[],
-  round: number,
-  alivePlayers: MafiaPlayer[],
-  model: string,
-  signal?: AbortSignal,
-): Promise<Array<{ accused: string; accusers: string[]; severity: string }>> {
-  const dayMsgs = messages.filter(
-    (m) => m.round === round && m.phase === "day" && m.playerId
-  );
-  if (dayMsgs.length === 0) return [];
-
-  const discussion = dayMsgs.map((m) => `${m.playerName}: ${m.content}`).join("\n");
-  const aliveNames = alivePlayers.map((p) => p.name).join(", ");
-
-  try {
-    const request: ChatRequest = {
-      model,
-      system: "You are analyzing a Mafia game discussion to identify accusations. Return only valid JSON, nothing else.",
-      messages: [{
-        role: "user",
-        content: [
-          `Alive players: ${aliveNames}`,
-          ``,
-          `Discussion from Day ${round}:`,
-          discussion,
-          ``,
-          `Identify which LIVING players are being ACCUSED of being a wolf. Only include genuine accusations or expressions of suspicion — not neutral or positive mentions. IGNORE any mentions of dead/eliminated players — they cannot be accused.`,
-          `Reply with ONLY a JSON array: [{"accused": "Name", "accusers": ["Name1", "Name2"], "severity": "high"|"medium"|"low"}]`,
-          `"high" = direct accusation with evidence/reasoning`,
-          `"medium" = expressed suspicion or doubt`,
-          `"low" = mild questioning`,
-          `If no accusations were made, reply with: []`,
-        ].join("\n"),
-      }],
-      temperature: 0,
-    };
-
-    let result = "";
-    await streamChatResponse(request, (token) => { result += token; }, signal);
-    const cleaned = result.replace(/```json\n?|\n?```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
-    if (Array.isArray(parsed)) {
-      // Validate names
-      return parsed.filter((entry: { accused: string; accusers: string[]; severity: string }) => {
-        const validAccused = alivePlayers.some((p) => p.name.toLowerCase() === entry.accused?.toLowerCase());
-        return validAccused && Array.isArray(entry.accusers) && entry.accusers.length > 0;
-      }).map((entry: { accused: string; accusers: string[]; severity: string }) => ({
-        ...entry,
-        accused: alivePlayers.find((p) => p.name.toLowerCase() === entry.accused.toLowerCase())!.name,
-      }));
-    }
-  } catch { /* analysis failed or aborted */ }
-
-  return [];
-}
-
-// ── game logic ────────────────────────────────────────────────────────────────
-
-function checkWinCondition(players: MafiaPlayer[]): "villagers" | "wolves" | null {
-  const alive = players.filter((p) => p.alive);
-  const wolves = alive.filter((p) => p.role === "wolf");
-  const villagers = alive.filter((p) => p.role !== "wolf");
-
-  if (wolves.length === 0) return "villagers";
-  if (wolves.length >= villagers.length) return "wolves";
-  return null;
-}
+import { MESSAGE_WINDOW, VOTE_CONTEXT_WINDOW, DEFAULT_TEMPERATURE, MODEL_KEY, TEMP_KEY } from "@/lib/mafia/constants";
+import type { DoctorProtection, RoundHistoryEntry } from "@/lib/mafia/prompts";
+import {
+  buildDayPrompt, buildRebuttalPrompt, buildFollowUpPrompt, buildVotePrompt,
+  buildTrialDefensePrompt, buildJudgmentVotePrompt, buildWolfDiscussionPrompt,
+  buildDoctorPrompt, buildDetectivePrompt, buildLastWordsPrompt,
+  buildDeathReactionPrompt, buildWolfStrategyPrompt, buildInterjectionPrompt,
+  buildGeneratorPrompt,
+} from "@/lib/mafia/prompts";
+import {
+  nextMsgId, shuffle, checkWinCondition, detectEchoChamber,
+  formatTrialContext, formatRecentChat, formatWolfContext,
+  parseVotesFromSpeech, parseWolfKillFromDiscussion, parseNightChoiceWithRetry,
+  parseJudgmentVotes, orchestrateAccusations,
+} from "@/lib/mafia/helpers";
 
 // ── Dialog component ──────────────────────────────────────────────────────────
 
@@ -1391,7 +457,6 @@ export default function MafiaPage() {
   const [usePresets, setUsePresets] = useState(true);
   const [customPersonalities, setCustomPersonalities] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [personalityRewrite, setPersonalityRewrite] = useState(true);
 
   // Pre-game player editing
   const [previewPlayers, setPreviewPlayers] = useState<Array<{ name: string; personality: string }>>([]);
@@ -1420,16 +485,9 @@ export default function MafiaPage() {
   const winnerRef = useRef<"villagers" | "wolves" | null>(null);
   const lastProtectedRef = useRef<string | null>(null);
   const detectiveResultsRef = useRef<Array<{ round: number; target: string; isWolf: boolean }>>([]);
-  const roundHistoryRef = useRef<Array<{
-    round: number;
-    hangedName: string | null;
-    hangedRole: MafiaRole | null;
-    nightKillName: string | null;
-    nightKillSaved: boolean;
-    votes: Array<{ voter: string; target: string }>;
-  }>>([]);
+  const doctorHistoryRef = useRef<DoctorProtection[]>([]);
+  const roundHistoryRef = useRef<RoundHistoryEntry[]>([]);
   const playerSaidRef = useRef<Map<string, string[]>>(new Map());
-  const personalityRewriteRef = useRef(true);
 
   // ── sync refs ──
   useEffect(() => { playersRef.current = players; }, [players]);
@@ -1439,7 +497,6 @@ export default function MafiaPage() {
   useEffect(() => { temperatureRef.current = temperature; }, [temperature]);
   useEffect(() => { maxRoundsRef.current = maxRounds; }, [maxRounds]);
   useEffect(() => { winnerRef.current = winner; }, [winner]);
-  useEffect(() => { personalityRewriteRef.current = personalityRewrite; }, [personalityRewrite]);
 
 
   // Clamp wolf count: wolves must be strictly fewer than non-wolves
@@ -1603,12 +660,6 @@ export default function MafiaPage() {
       cleaned = "(stays silent)";
     }
 
-    // Voice rewrite pass — rewrite in the player's distinctive voice
-    if (personalityRewriteRef.current && cleaned !== "(stays silent)" && speaker.personality) {
-      updateMessage(placeholderId, cleaned + " ...");
-      cleaned = await rewriteInVoice(cleaned, speaker.name, speaker.personality, modelRef.current, abortRef.current?.signal);
-    }
-
     updateMessage(placeholderId, cleaned);
     setStreamingMsgId(null);
     return cleaned;
@@ -1616,7 +667,7 @@ export default function MafiaPage() {
 
   // ── day phase: one player speaks ──
 
-  const runDaySpeech = useCallback(async (speaker: MafiaPlayer, currentRound: number) => {
+  const runDaySpeech = useCallback(async (speaker: MafiaPlayer, currentRound: number, notYetSpoken?: string[]) => {
     const detResults = speaker.role === "detective" ? detectiveResultsRef.current : undefined;
     const previousSaid = playerSaidRef.current.get(speaker.id);
 
@@ -1630,7 +681,9 @@ export default function MafiaPage() {
       if (wolfStrategy.length === 0) wolfStrategy = undefined;
     }
 
-    const system = buildDayPrompt(speaker, playersRef.current, currentRound, detResults, roundHistoryRef.current, previousSaid, wolfStrategy);
+    const docHistory = speaker.role === "doctor" ? doctorHistoryRef.current : undefined;
+    const echoWarning = detectEchoChamber(messagesRef.current, currentRound);
+    const system = buildDayPrompt(speaker, playersRef.current, currentRound, detResults, roundHistoryRef.current, previousSaid, wolfStrategy, docHistory, notYetSpoken, echoWarning);
     const recentChat = formatRecentChat(messagesRef.current, MESSAGE_WINDOW, false, playersRef.current);
     const speech = await generateSpeech(system, recentChat, speaker, currentRound, "day");
     // Track what this player said (for no-repeat)
@@ -1648,7 +701,9 @@ export default function MafiaPage() {
     currentRound: number,
     accuserNames: string[],
   ) => {
-    const system = buildRebuttalPrompt(speaker, playersRef.current, currentRound, accuserNames);
+    const detResults = speaker.role === "detective" ? detectiveResultsRef.current : undefined;
+    const docHistory = speaker.role === "doctor" ? doctorHistoryRef.current : undefined;
+    const system = buildRebuttalPrompt(speaker, playersRef.current, currentRound, accuserNames, detResults, docHistory);
     const recentChat = formatRecentChat(messagesRef.current, MESSAGE_WINDOW, false, playersRef.current);
     await generateSpeech(system, recentChat, speaker, currentRound, "day");
   }, [generateSpeech]);
@@ -1660,7 +715,9 @@ export default function MafiaPage() {
     currentRound: number,
     defendingPlayerName: string,
   ) => {
-    const system = buildFollowUpPrompt(speaker, playersRef.current, currentRound, defendingPlayerName);
+    const detResults = speaker.role === "detective" ? detectiveResultsRef.current : undefined;
+    const docHistory = speaker.role === "doctor" ? doctorHistoryRef.current : undefined;
+    const system = buildFollowUpPrompt(speaker, playersRef.current, currentRound, defendingPlayerName, detResults, docHistory);
     const recentChat = formatRecentChat(messagesRef.current, MESSAGE_WINDOW, false, playersRef.current);
     await generateSpeech(system, recentChat, speaker, currentRound, "day");
   }, [generateSpeech]);
@@ -1668,7 +725,9 @@ export default function MafiaPage() {
   // ── last words: hanged player's final speech ──
 
   const runLastWords = useCallback(async (speaker: MafiaPlayer, currentRound: number) => {
-    const system = buildLastWordsPrompt(speaker, playersRef.current);
+    const detResults = speaker.role === "detective" ? detectiveResultsRef.current : undefined;
+    const docHistory = speaker.role === "doctor" ? doctorHistoryRef.current : undefined;
+    const system = buildLastWordsPrompt(speaker, playersRef.current, detResults, docHistory);
     const recentChat = formatRecentChat(messagesRef.current, MESSAGE_WINDOW, false, playersRef.current);
     await generateSpeech(system, recentChat, speaker, currentRound, "day");
   }, [generateSpeech]);
@@ -1705,7 +764,9 @@ export default function MafiaPage() {
       if (stopFlagRef.current) return { hanged: null, votes: [] };
 
       setStatusMsg(`${voter.name} names their suspect...`);
-      const system = buildVotePrompt(voter, playersRef.current, roundHistoryRef.current, currentRound);
+      const detResults = voter.role === "detective" ? detectiveResultsRef.current : undefined;
+      const docHistory = voter.role === "doctor" ? doctorHistoryRef.current : undefined;
+      const system = buildVotePrompt(voter, playersRef.current, roundHistoryRef.current, currentRound, detResults, docHistory);
       let speech = await generateSpeech(system, frozenVoteContext, voter, currentRound, "vote");
 
       if (!speech || speech === "(stays silent)") {
@@ -1783,7 +844,9 @@ export default function MafiaPage() {
 
     if (!stopFlagRef.current) {
       setStatusMsg(`${accused.name} defends themselves at trial...`);
-      const defenseSystem = buildTrialDefensePrompt(accused, playersRef.current);
+      const defDetResults = accused.role === "detective" ? detectiveResultsRef.current : undefined;
+      const defDocHistory = accused.role === "doctor" ? doctorHistoryRef.current : undefined;
+      const defenseSystem = buildTrialDefensePrompt(accused, playersRef.current, defDetResults, defDocHistory);
       const defenseContext = formatRecentChat(messagesRef.current, MESSAGE_WINDOW, false, playersRef.current);
       await generateSpeech(defenseSystem, defenseContext, accused, currentRound, "vote");
     }
@@ -1810,7 +873,8 @@ export default function MafiaPage() {
       if (stopFlagRef.current) return { hanged: null, votes };
 
       setStatusMsg(`${juror.name} votes on ${accused.name}'s fate...`);
-      const system = buildJudgmentVotePrompt(juror, accused, playersRef.current);
+      const jurorDetResults = juror.role === "detective" ? detectiveResultsRef.current : undefined;
+      const system = buildJudgmentVotePrompt(juror, accused, playersRef.current, jurorDetResults);
       const speech = await generateSpeech(system, frozenTrialContext, juror, currentRound, "vote");
       judgmentSpeeches.push({ voterName: juror.name, speech });
     }
@@ -2002,6 +1066,12 @@ export default function MafiaPage() {
     // Resolve night kill
     const victim = playersRef.current.find((p) => p.name === wolfTargetName && p.alive);
 
+    // Track doctor protection history
+    if (protectedName) {
+      const saved = victim ? protectedName === victim.name : false;
+      doctorHistoryRef.current = [...doctorHistoryRef.current, { round: currentRound, target: protectedName, saved }];
+    }
+
     if (victim) {
       if (protectedName === victim.name) {
         addMessage({
@@ -2121,10 +1191,12 @@ export default function MafiaPage() {
       const speakOrder = shuffle(alive);
 
       // Everyone speaks once
-      for (const speaker of speakOrder) {
+      for (let i = 0; i < speakOrder.length; i++) {
         if (stopFlagRef.current) break;
+        const speaker = speakOrder[i];
+        const notYetSpoken = speakOrder.slice(i + 1).map((p) => p.name);
         setStatusMsg(`${speaker.name} is speaking...`);
-        await runDaySpeech(speaker, currentRound);
+        await runDaySpeech(speaker, currentRound, notYetSpoken);
         if (stopFlagRef.current) break;
       }
 
@@ -2302,6 +1374,7 @@ export default function MafiaPage() {
     abortRef.current = new AbortController();
     lastProtectedRef.current = null;
     detectiveResultsRef.current = [];
+    doctorHistoryRef.current = [];
     roundHistoryRef.current = [];
     playerSaidRef.current = new Map();
     setIsRunning(true);
@@ -2667,17 +1740,6 @@ export default function MafiaPage() {
               </div>
               <W95Slider min={0} max={2} step={0.05} value={temperature} onChange={setTemperature} />
             </div>
-
-            {/* Voice rewrite toggle */}
-            <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: "bold", color: "#555", cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={personalityRewrite}
-                onChange={(e) => setPersonalityRewrite(e.target.checked)}
-                disabled={isRunning}
-              />
-              VOICE REWRITE
-            </label>
 
             <div className="w95-divider" />
 

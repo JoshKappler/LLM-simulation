@@ -35,6 +35,7 @@ export interface ChatChunk {
   retryMs?: number;
   retrySecs?: number;
   message?: { role: string; content: string };
+  error?: string;
   done: boolean;
 }
 

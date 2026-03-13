@@ -1,6 +1,6 @@
 /**
  * Headless run executor — server-side equivalent of the browser run loop.
- * Calls Ollama directly without going through the Next.js /api/chat proxy.
+ * Calls Groq API directly without going through the Next.js /api/chat proxy.
  */
 
 import type { AgentConfig, ConversationTurn, PromptConfig } from "../types";

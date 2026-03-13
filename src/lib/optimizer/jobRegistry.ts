@@ -1,6 +1,6 @@
 /**
  * Job registry — tracks active AbortControllers so the stop route can
- * immediately cancel in-flight Ollama requests instead of waiting for
+ * immediately cancel in-flight API requests instead of waiting for
  * the next stopFlag file check.
  */
 

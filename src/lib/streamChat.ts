@@ -38,6 +38,9 @@ export async function streamChatResponse(
         continue;
       }
       if (chunk.type === "rate_limit") continue;
+      if (chunk.error) {
+        throw new Error(`API error: ${chunk.error}`);
+      }
       if (chunk.message?.content) {
         full += chunk.message.content;
         onToken(chunk.message.content);

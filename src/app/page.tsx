@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type {
   AgentConfig, ConversationTurn, PromptConfig,
-  OllamaChunk, PersonalityPreset, SituationPreset, GuidelinesPreset, RunSummary, RunRecord,
+  ChatChunk, PersonalityPreset, SituationPreset, GuidelinesPreset, RunSummary, RunRecord,
 } from "@/lib/types";
 import {
   buildSystemPrompt, buildChatMessages,
@@ -11,7 +11,7 @@ import {
   DEFAULT_BLOCK_ORDER, BLOCK_LABELS,
   type PromptBlock,
 } from "@/lib/prompting";
-import { cleanOutput } from "@/lib/cleanOutput";
+import { cleanOutput, stripThinkBlocks } from "@/lib/cleanOutput";
 
 const MODEL_STORAGE_KEY = "agent-arena-model";
 const TEMP_STORAGE_KEY = "agent-arena-temperature";
@@ -636,12 +636,9 @@ export default function Home() {
     }
   }, [characters.length, characterTab]);
 
-  // Stop Ollama when the arena run ends
+  // Track previous running state
   const prevIsRunning = useRef(false);
   useEffect(() => {
-    if (prevIsRunning.current && !isRunning) {
-      fetch("/api/ollama/stop", { method: "POST" }).catch(() => {});
-    }
     prevIsRunning.current = isRunning;
   }, [isRunning]);
 
@@ -742,7 +739,7 @@ export default function Home() {
       }, 5_000);
       const timeoutTimer = setTimeout(() => {
         if (!firstTokenReceived) {
-          controller.abort(new Error("Timeout: Ollama took too long to respond. Is the model loaded?"));
+          controller.abort(new Error("Timeout: API took too long to respond."));
         }
       }, 120_000);
 
@@ -784,7 +781,7 @@ export default function Home() {
           const trimmed = line.trim();
           if (!trimmed) continue;
           try {
-            const chunk = JSON.parse(trimmed) as OllamaChunk & { error?: string };
+            const chunk = JSON.parse(trimmed) as ChatChunk & { error?: string };
             if (chunk.error) throw new Error(chunk.error);
             if (chunk.type === "rate_limit") {
               setStatusMsg(`Groq rate limit — retrying in ${chunk.retrySecs ?? Math.ceil((chunk.retryMs ?? 15000) / 1000)}s...`);
@@ -801,13 +798,7 @@ export default function Home() {
               setTurns((prev) => {
                 const next = [...prev];
                 const speakerEscaped = speaking.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                const display = fullContent
-                  .replace(/<think>[\s\S]*?<\/think>/gi, "")
-                  .replace(/<think>[\s\S]*/i, "…")
-                  .replace(/<\|thinking\|>[\s\S]*?<\|\/thinking\|>/gi, "")
-                  .replace(/<\|thinking\|>[\s\S]*/i, "…")
-                  .replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, "")
-                  .replace(/<reasoning>[\s\S]*/i, "…")
+                const display = stripThinkBlocks(fullContent, true)
                   .replace(new RegExp(`^\\s*${speakerEscaped}\\s*:\\s*`, "i"), "")
                   .trim();
                 next[next.length - 1] = { ...next[next.length - 1], content: display || "…" };
@@ -828,9 +819,7 @@ export default function Home() {
         // Killer output was fully stripped (e.g. asterisk-wrapped stage directions).
         // Apply lighter cleaning: preserve inner asterisk content instead of dropping it.
         const speakerEsc = speaking.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        cleaned = fullContent
-          .replace(/<think>[\s\S]*?<\/think>/gi, "")
-          .replace(/<think>[\s\S]*/i, "")
+        cleaned = stripThinkBlocks(fullContent)
           .replace(new RegExp(`^\\s*${speakerEsc}\\s*:\\s*`, "i"), "")
           .replace(/\*([^*]+)\*/g, "$1")
           .trim();

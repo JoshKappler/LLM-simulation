@@ -54,8 +54,8 @@ export function buildSystemPrompt(
   const opponentName = opponent?.name ?? "the other person";
 
   // Per-character overrides take precedence over the shared global values.
-  const effectiveGuidelines = speaking.guidelinesOverride !== undefined ? speaking.guidelinesOverride : guidelines;
-  const effectiveSituation = speaking.situationOverride !== undefined ? speaking.situationOverride : situation;
+  const effectiveGuidelines = speaking.guidelinesOverride?.trim() || guidelines;
+  const effectiveSituation = speaking.situationOverride?.trim() || situation;
 
   const guidelinesText = effectiveGuidelines.trim();
   const identityParts = [
